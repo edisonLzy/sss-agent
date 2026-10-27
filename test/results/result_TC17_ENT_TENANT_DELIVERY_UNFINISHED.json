@@ -1,0 +1,195 @@
+{
+  "testCase": {
+    "id": "TC17_ENT_TENANT_DELIVERY_UNFINISHED",
+    "name": "委托到期-租客退租交割未完成",
+    "module": "委托到期子流程",
+    "description": "租客交割未完成，私聊租务管家催办租客交割并提醒上传业主交割清单，command: null 挂起，阻断后续核查",
+    "mockScenario": "entrusted_tenant_delivery_unfinished",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "sessionId": "session-test-017",
+      "requestId": "req-test-017"
+    },
+    "expected": {
+      "command": null,
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "租客解约交割未完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_tenant_delivery_checklist",
+        "contact_zuwu_and_asset_manager"
+      ],
+      "forbiddenToolCalls": [
+        "query_owner_delivery_checklist",
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "委托到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有解约协议"
+    },
+    {
+      "stepIndex": 3,
+      "phase": "委托到期-续约排查",
+      "toolName": "query_owner_renewal_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "agentDeduction": "排查收房合同是否已有续约合同"
+    },
+    {
+      "stepIndex": 4,
+      "phase": "委托到期-租客在租排查",
+      "toolName": "query_tenant_contract",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "agentDeduction": "排查房源是否存在生效中出房租约"
+    },
+    {
+      "stepIndex": 5,
+      "phase": "委托到期-租客交割核查",
+      "toolName": "query_tenant_delivery_checklist",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasDeliveryOrder": true,
+          "isDeliveryFinished": false,
+          "deliveryStatusDesc": "进行中",
+          "deliveryCode": "JG_ZK_20261027001",
+          "hasDamage": false,
+          "damageDescList": [],
+          "tenantContractCode": "CZ_HIST_20261027001",
+          "canProceedTermination": false
+        }
+      },
+      "agentDeduction": "核查上任租客退租交割完成状态及物品损坏"
+    },
+    {
+      "stepIndex": 6,
+      "phase": "委托到期-催办租客交割",
+      "toolName": "contact_zuwu_and_asset_manager",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "target": "ZUWU",
+        "contactReason": "租客交割未完成，催办租客交割及业主交割清单",
+        "content": "管家您好，该房源业主已明确到期解约，请抓紧完成租客退租解约交割，并同步上传、完成业主解约交割清单。",
+        "sessionId": "session-test-017",
+        "requestId": "req-test-017"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "taskId": "TASK_1793113226497",
+          "status": "ACCEPTED",
+          "statusDesc": "已发送成功待回复",
+          "acceptedTargets": [
+            "ZUWU"
+          ],
+          "contactedTargets": [
+            "ZUWU"
+          ]
+        }
+      },
+      "agentDeduction": "私聊租务管家催办租客交割与上传业主交割清单"
+    }
+  ],
+  "agentOutput": {
+    "command": null,
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "租客解约交割未完成，已联系租务管家催办租客交割及业主交割清单，本轮不再继续后续流程"
+  },
+  "durationMs": 3,
+  "executedAt": "2026-10-27T15:00:26.497Z"
+}

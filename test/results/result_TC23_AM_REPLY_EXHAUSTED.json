@@ -1,0 +1,190 @@
+{
+  "testCase": {
+    "id": "TC23_AM_REPLY_EXHAUSTED",
+    "name": "资管确认-3次追问耗尽关单",
+    "module": "资管授权与多轮确认",
+    "description": "资管经3次追问仍未回复且查询工具确认追问耗尽 (nextContactAt=null)，定义为资管未回复结束工单 command: end",
+    "mockScenario": "first_recruit_am_exhausted",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-023",
+      "requestId": "req-test-023"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "资管未回复",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    },
+    {
+      "stepIndex": 3,
+      "phase": "首招到期-延长期排查",
+      "toolName": "query_first_recruit_extension_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidExtension": false,
+          "isConfirmed": false,
+          "extensionStatusDesc": "无延长期记录",
+          "extendStartDate": null,
+          "extendEndDate": null
+        }
+      },
+      "agentDeduction": "查询原合同是否存在首招延长期变更协议"
+    },
+    {
+      "stepIndex": 4,
+      "phase": "首招到期-续约排查",
+      "toolName": "query_owner_renewal_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "agentDeduction": "排查原合同是否已发起续约合同"
+    },
+    {
+      "stepIndex": 5,
+      "phase": "首招到期-租客在租排查",
+      "toolName": "query_tenant_contract",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "agentDeduction": "排查房源是否存在生效中的租客出租合同"
+    },
+    {
+      "stepIndex": 6,
+      "phase": "首招到期-资管授权查询",
+      "toolName": "query_asset_manager_authorization",
+      "requestPayload": {
+        "executionId": 123,
+        "orderId": 88888,
+        "contractCode": "TG20261024001",
+        "sessionId": "session-test-023",
+        "requestId": "req-test-023"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "123",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "3次追问耗尽仍未回复",
+          "authorizationStatus": "INIT",
+          "nextContactAt": null,
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "agentDeduction": "查询资管管家同意发起授权与下次追问时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "资管经理经3次追问仍未回复，定义为资管未回复，结束本次工单"
+  },
+  "durationMs": 6,
+  "executedAt": "2026-10-27T15:00:26.522Z"
+}

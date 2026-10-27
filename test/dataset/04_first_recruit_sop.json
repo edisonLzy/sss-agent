@@ -1,0 +1,190 @@
+[
+  {
+    "id": "TC09_FR_SIGNED_AGREEMENT",
+    "name": "首招到期-已有已签约解约协议",
+    "module": "首招到期子流程",
+    "description": "原收房合同已完成解约协议签署，发送致谢与不合作原因回访，输出 command: end 办结关单",
+    "mockScenario": "first_recruit_signed",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-009",
+      "requestId": "req-test-009"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswerContains": "首招到期解约协议已确认签署完成",
+      "reasonContains": "原收房合同解约协议已签署完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC10_FR_DRAFTING_AGREEMENT",
+    "name": "首招到期-已有在途待签协议",
+    "module": "首招到期子流程",
+    "description": "原收房合同已存在审批中或待签署的解约协议，防重提前结束自动推进，输出 command: end",
+    "mockScenario": "first_recruit_drafting",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-010",
+      "requestId": "req-test-010"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "在途审批或待签署的解约协议",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC11_FR_HAS_EXTENSION",
+    "name": "首招到期-存在首招延长期变更协议",
+    "module": "首招到期子流程",
+    "description": "原合同已办理或正在推进首招延长期变更，不可按到期解约，直接关单 command: end",
+    "mockScenario": "first_recruit_has_extension",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-011",
+      "requestId": "req-test-011"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "首招延长期变更",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC12_FR_HAS_RENEWAL",
+    "name": "首招到期-存在业主续约合同",
+    "module": "首招到期子流程",
+    "description": "原合同已存在有效续约合同，定义为“业主续约”，直接关单 command: end",
+    "mockScenario": "first_recruit_has_renewal",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-012",
+      "requestId": "req-test-012"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主续约",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement",
+        "query_owner_renewal_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC13_FR_HAS_TENANT",
+    "name": "首招到期-存在在租租客协议",
+    "module": "首招到期子流程",
+    "description": "房源存在有效出房租约，定义为“租客续约/在租”，直接关单 command: end",
+    "mockScenario": "first_recruit_has_tenant",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-013",
+      "requestId": "req-test-013"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "在租",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract"
+      ]
+    }
+  },
+  {
+    "id": "TC14_FR_FULL_SUCCESS",
+    "name": "首招到期-全流程顺利起草成功",
+    "module": "首招到期子流程",
+    "description": "无协议冲突，资管明确同意，调用起草接口成功，群内通知起草成功进展，挂起 t+2 提醒 schedule",
+    "mockScenario": "first_recruit_success",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-014",
+      "requestId": "req-test-014"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "finalAnswerContains": "首招到期解约协议已起草完成",
+      "reasonContains": "起草成功",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_asset_manager_authorization",
+        "save_asset_manager_authorization",
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC15_FR_DRAFT_FAILED",
+    "name": "首招到期-起草协议写接口异常",
+    "module": "首招到期子流程",
+    "description": "写接口调用失败严格执行 0 次重试，直接转人工服务管家 transfer_to_human",
+    "mockScenario": "draft_fail",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-015",
+      "requestId": "req-test-015"
+    },
+    "expected": {
+      "command": "transfer_to_human",
+      "nextScheduleAt": null,
+      "finalAnswerContains": "人工服务管家",
+      "reasonContains": "转人工",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_asset_manager_authorization",
+        "save_asset_manager_authorization",
+        "draft_owner_termination_agreement"
+      ]
+    }
+  }
+]

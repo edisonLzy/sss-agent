@@ -1,0 +1,261 @@
+{
+  "testCase": {
+    "id": "TC21_AM_NOT_CONTACTED",
+    "name": "资管确认-首次进入未联系",
+    "module": "资管授权与多轮确认",
+    "description": "资管联系状态为未联系 (NOT_CONTACTED)，私聊发送初次咨询，重新查询获取下次追问时间并挂起 schedule",
+    "mockScenario": "first_recruit_am_not_contacted",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-021",
+      "requestId": "req-test-021"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "finalAnswer": null,
+      "reasonContains": "等待资管回复",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization",
+        "contact_zuwu_and_asset_manager",
+        "query_asset_manager_authorization"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    },
+    {
+      "stepIndex": 3,
+      "phase": "首招到期-延长期排查",
+      "toolName": "query_first_recruit_extension_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidExtension": false,
+          "isConfirmed": false,
+          "extensionStatusDesc": "无延长期记录",
+          "extendStartDate": null,
+          "extendEndDate": null
+        }
+      },
+      "agentDeduction": "查询原合同是否存在首招延长期变更协议"
+    },
+    {
+      "stepIndex": 4,
+      "phase": "首招到期-续约排查",
+      "toolName": "query_owner_renewal_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "agentDeduction": "排查原合同是否已发起续约合同"
+    },
+    {
+      "stepIndex": 5,
+      "phase": "首招到期-租客在租排查",
+      "toolName": "query_tenant_contract",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "agentDeduction": "排查房源是否存在生效中的租客出租合同"
+    },
+    {
+      "stepIndex": 6,
+      "phase": "首招到期-资管授权查询",
+      "toolName": "query_asset_manager_authorization",
+      "requestPayload": {
+        "executionId": 123,
+        "orderId": 88888,
+        "contractCode": "TG20261024001",
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "123",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "待联系资管确认",
+          "authorizationStatus": "INIT",
+          "nextContactAt": "2026-10-27T16:00:00+08:00",
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "agentDeduction": "查询资管管家同意发起授权与下次追问时间"
+    },
+    {
+      "stepIndex": 7,
+      "phase": "首招到期-初次联系资管",
+      "toolName": "contact_zuwu_and_asset_manager",
+      "requestPayload": {
+        "executionId": 123,
+        "orderId": 88888,
+        "contractCode": "TG20261024001",
+        "target": "ASSET_MANAGER",
+        "contactReason": "咨询首招到期是否同意起草解约协议",
+        "content": "资管经理您好，该房屋首招到期，相关前置排查已通过，请问是否同意起草解约协议？审核通过后将按流程发送业主签约。",
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "taskId": "TASK_1793113226512",
+          "status": "ACCEPTED",
+          "statusDesc": "已发送成功待回复",
+          "acceptedTargets": [
+            "ASSET_MANAGER"
+          ],
+          "contactedTargets": [
+            "ASSET_MANAGER"
+          ]
+        }
+      },
+      "agentDeduction": "私聊资管发送初次意向咨询"
+    },
+    {
+      "stepIndex": 8,
+      "phase": "首招到期-刷新追问时间",
+      "toolName": "query_asset_manager_authorization",
+      "requestPayload": {
+        "executionId": 123,
+        "orderId": 88888,
+        "contractCode": "TG20261024001",
+        "sessionId": "session-test-021",
+        "requestId": "req-test-021"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "123",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "待联系资管确认",
+          "authorizationStatus": "INIT",
+          "nextContactAt": "2026-10-27T16:00:00+08:00",
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "agentDeduction": "重新查询下次联系时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "schedule",
+    "nextScheduleAt": "2026-10-27T16:00:00+08:00",
+    "finalAnswer": null,
+    "reason": "等待资管回复"
+  },
+  "durationMs": 3,
+  "executedAt": "2026-10-27T15:00:26.512Z"
+}

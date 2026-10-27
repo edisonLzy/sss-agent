@@ -1,0 +1,32 @@
+{
+  "testCase": {
+    "id": "TC02_PARAM_MISSING_CONTRACT_CODE",
+    "name": "前置参数校验-缺失contractCode",
+    "module": "前置参数校验",
+    "description": "必填字段 contractCode 为空时，触发前置校验失败并直接转人工服务管家",
+    "mockScenario": "first_recruit_success",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "",
+      "terminationType": "首招到期"
+    },
+    "expected": {
+      "command": "transfer_to_human",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "前置校验失败：缺失必填运行参数",
+      "expectedToolCalls": []
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [],
+  "agentOutput": {
+    "command": "transfer_to_human",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "前置校验失败：缺失必填运行参数（orderId/contractCode/terminationType），转人工服务管家核验"
+  },
+  "durationMs": 2,
+  "executedAt": "2026-10-27T15:00:26.459Z"
+}

@@ -1,0 +1,153 @@
+[
+  {
+    "id": "TC16_ENT_SIGNED_AGREEMENT",
+    "name": "委托到期-已有已签约解约协议",
+    "module": "委托到期子流程",
+    "description": "原收房合同已完成委托解约协议签署，发送致谢祝福及不合作原因回访，输出 command: end 办结关单",
+    "mockScenario": "first_recruit_signed",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "sessionId": "session-test-016",
+      "requestId": "req-test-016"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswerContains": "委托到期解约协议已确认签署完成",
+      "reasonContains": "原收房合同解约协议已签署完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC17_ENT_TENANT_DELIVERY_UNFINISHED",
+    "name": "委托到期-租客退租交割未完成",
+    "module": "委托到期子流程",
+    "description": "租客交割未完成，私聊租务管家催办租客交割并提醒上传业主交割清单，command: null 挂起，阻断后续核查",
+    "mockScenario": "entrusted_tenant_delivery_unfinished",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "sessionId": "session-test-017",
+      "requestId": "req-test-017"
+    },
+    "expected": {
+      "command": null,
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "租客解约交割未完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_tenant_delivery_checklist",
+        "contact_zuwu_and_asset_manager"
+      ],
+      "forbiddenToolCalls": [
+        "query_owner_delivery_checklist",
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC18_ENT_OWNER_DELIVERY_UNFINISHED",
+    "name": "委托到期-租客交割已完但业主交割单未完成",
+    "module": "委托到期子流程",
+    "description": "租客交割已完成，但业主还房交割单未完成，私聊租务管家催办完成业主交割单，command: null 挂起",
+    "mockScenario": "entrusted_owner_delivery_unfinished",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "sessionId": "session-test-018",
+      "requestId": "req-test-018"
+    },
+    "expected": {
+      "command": null,
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主解约交割清单未完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_tenant_delivery_checklist",
+        "query_owner_delivery_checklist",
+        "contact_zuwu_and_asset_manager"
+      ],
+      "forbiddenToolCalls": [
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC19_ENT_HAS_DAMAGE",
+    "name": "委托到期-交割清单检查存在物品损坏",
+    "module": "委托到期子流程",
+    "description": "交割清单中存在物品损坏，任务流程结束关单 command: end 并记录有物损，严禁起草协议",
+    "mockScenario": "entrusted_has_damage",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "sessionId": "session-test-019",
+      "requestId": "req-test-019"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "存在物品损坏",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_tenant_delivery_checklist",
+        "query_owner_delivery_checklist"
+      ],
+      "forbiddenToolCalls": [
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC20_ENT_FULL_SUCCESS",
+    "name": "委托到期-全流程顺利起草成功",
+    "module": "委托到期子流程",
+    "description": "无协议冲突，双交割已完无物损，资管同意起草，起草成功并通知业主进展，安排 t+2 提醒 schedule",
+    "mockScenario": "entrusted_success",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "委托到期",
+      "executionId": 123,
+      "sessionId": "session-test-020",
+      "requestId": "req-test-020"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "finalAnswerContains": "委托到期解约协议已起草完成",
+      "reasonContains": "起草成功",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract",
+        "query_tenant_delivery_checklist",
+        "query_owner_delivery_checklist",
+        "query_asset_manager_authorization",
+        "save_asset_manager_authorization",
+        "draft_owner_termination_agreement"
+      ]
+    }
+  }
+]

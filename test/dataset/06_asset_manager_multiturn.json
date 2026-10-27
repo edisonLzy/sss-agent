@@ -1,0 +1,132 @@
+[
+  {
+    "id": "TC21_AM_NOT_CONTACTED",
+    "name": "资管确认-首次进入未联系",
+    "module": "资管授权与多轮确认",
+    "description": "资管联系状态为未联系 (NOT_CONTACTED)，私聊发送初次咨询，重新查询获取下次追问时间并挂起 schedule",
+    "mockScenario": "first_recruit_am_not_contacted",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-021",
+      "requestId": "req-test-021"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "finalAnswer": null,
+      "reasonContains": "等待资管回复",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization",
+        "contact_zuwu_and_asset_manager",
+        "query_asset_manager_authorization"
+      ]
+    }
+  },
+  {
+    "id": "TC22_AM_WAITING_REPLY",
+    "name": "资管确认-未回复阶梯追问",
+    "module": "资管授权与多轮确认",
+    "description": "资管未回复且工具返回有效下次追问时间，私聊下发追问消息并挂起 schedule",
+    "mockScenario": "first_recruit_am_waiting_reply",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-022",
+      "requestId": "req-test-022"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAtPattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "finalAnswer": null,
+      "reasonContains": "等待资管回复",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization",
+        "contact_zuwu_and_asset_manager",
+        "query_asset_manager_authorization"
+      ]
+    }
+  },
+  {
+    "id": "TC23_AM_REPLY_EXHAUSTED",
+    "name": "资管确认-3次追问耗尽关单",
+    "module": "资管授权与多轮确认",
+    "description": "资管经3次追问仍未回复且查询工具确认追问耗尽 (nextContactAt=null)，定义为资管未回复结束工单 command: end",
+    "mockScenario": "first_recruit_am_exhausted",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-023",
+      "requestId": "req-test-023"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "资管未回复",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization"
+      ]
+    }
+  },
+  {
+    "id": "TC24_AM_DECLINE_AND_REASON",
+    "name": "资管确认-暂不同意与原因追问",
+    "module": "资管授权与多轮确认",
+    "description": "资管回复暂不同意 (DECLINE_DRAFT)，保存意图并私聊追问具体原因及是否稍后联系，command: null 挂起，不关单不转人工",
+    "mockScenario": "first_recruit_am_decline",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-024",
+      "requestId": "req-test-024"
+    },
+    "expected": {
+      "command": null,
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "资管暂不同意起草",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization",
+        "save_asset_manager_authorization",
+        "contact_zuwu_and_asset_manager"
+      ],
+      "forbiddenToolCalls": [
+        "draft_owner_termination_agreement"
+      ]
+    }
+  },
+  {
+    "id": "TC25_AM_CONTACT_LATER_MULTITURN",
+    "name": "资管确认-稍后联系多轮澄清闭环",
+    "module": "资管授权与多轮确认",
+    "description": "资管回复稍后联系但未定时间 -> 追问具体时间；新一轮回复'明天上午10点确认' -> 结合上下文消歧补充时间 -> 保存意图并挂起 schedule 约定时间",
+    "mockScenario": "first_recruit_am_later_with_time",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "executionId": 123,
+      "sessionId": "session-test-025",
+      "requestId": "req-test-025"
+    },
+    "expected": {
+      "command": "schedule",
+      "nextScheduleAt": "2026-10-28T10:00:00+08:00",
+      "finalAnswer": null,
+      "reasonContains": "稍后联系",
+      "expectedToolCalls": [
+        "query_asset_manager_authorization",
+        "save_asset_manager_authorization"
+      ]
+    }
+  }
+]

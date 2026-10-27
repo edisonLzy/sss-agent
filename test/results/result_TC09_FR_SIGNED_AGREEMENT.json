@@ -1,0 +1,83 @@
+{
+  "testCase": {
+    "id": "TC09_FR_SIGNED_AGREEMENT",
+    "name": "首招到期-已有已签约解约协议",
+    "module": "首招到期子流程",
+    "description": "原收房合同已完成解约协议签署，发送致谢与不合作原因回访，输出 command: end 办结关单",
+    "mockScenario": "first_recruit_signed",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-009",
+      "requestId": "req-test-009"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswerContains": "首招到期解约协议已确认签署完成",
+      "reasonContains": "原收房合同解约协议已签署完成",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-009",
+        "requestId": "req-test-009"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-009",
+        "requestId": "req-test-009"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": true,
+          "isSigned": true,
+          "agreementStatusDesc": "已签约",
+          "agreementCode": "TC_SIGNED_999"
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": "@业主 您好，您的房屋首招到期解约协议已确认签署完成，解约手续已全部办结。感谢您一直以来对我们的信任与支持，祝您生活愉快！请问本次不再合作的主要原因是什么呢？您的宝贵建议对我们至关重要。",
+    "reason": "原收房合同解约协议已签署完成，发送服务合作致谢祝福及不合作原因回访，流程完结直接关单"
+  },
+  "durationMs": 2,
+  "executedAt": "2026-10-27T15:00:26.474Z"
+}

@@ -1,0 +1,59 @@
+{
+  "testCase": {
+    "id": "TC07_INTENTION_AM_FOLLOW",
+    "name": "意向分流-资管线下自跟进",
+    "module": "意向分流",
+    "description": "意向标记为资管线下自跟进 (ASSET_MANAGER_FOLLOW)，输出 command: end 提前结束",
+    "mockScenario": "intention_asset_manager_follow",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-007",
+      "requestId": "req-test-007"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "资管线下自跟进",
+      "expectedToolCalls": [
+        "query_owner_intention"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-007",
+        "requestId": "req-test-007"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "ASSET_MANAGER_FOLLOW",
+          "intentionDesc": "资管跟进",
+          "expectedHandoverTime": null,
+          "expectedHandoverTimeDesc": "业主未回复"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "业主意向标记为资管线下自跟进，提前结束本次自动推进"
+  },
+  "durationMs": 1,
+  "executedAt": "2026-10-27T15:00:26.470Z"
+}

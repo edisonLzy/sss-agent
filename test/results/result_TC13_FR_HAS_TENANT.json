@@ -1,0 +1,156 @@
+{
+  "testCase": {
+    "id": "TC13_FR_HAS_TENANT",
+    "name": "首招到期-存在在租租客协议",
+    "module": "首招到期子流程",
+    "description": "房源存在有效出房租约，定义为“租客续约/在租”，直接关单 command: end",
+    "mockScenario": "first_recruit_has_tenant",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-013",
+      "requestId": "req-test-013"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "在租",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement",
+        "query_owner_renewal_agreement",
+        "query_tenant_contract"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-013",
+        "requestId": "req-test-013"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-013",
+        "requestId": "req-test-013"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    },
+    {
+      "stepIndex": 3,
+      "phase": "首招到期-延长期排查",
+      "toolName": "query_first_recruit_extension_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-013",
+        "requestId": "req-test-013"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidExtension": false,
+          "isConfirmed": false,
+          "extensionStatusDesc": "无延长期记录",
+          "extendStartDate": null,
+          "extendEndDate": null
+        }
+      },
+      "agentDeduction": "查询原合同是否存在首招延长期变更协议"
+    },
+    {
+      "stepIndex": 4,
+      "phase": "首招到期-续约排查",
+      "toolName": "query_owner_renewal_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-013",
+        "requestId": "req-test-013"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "agentDeduction": "排查原合同是否已发起续约合同"
+    },
+    {
+      "stepIndex": 5,
+      "phase": "首招到期-租客在租排查",
+      "toolName": "query_tenant_contract",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-013",
+        "requestId": "req-test-013"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": true,
+          "isSigned": true,
+          "tenantContractStatusDesc": "已签约在租",
+          "tenantContractCode": "CZ_20261027001"
+        }
+      },
+      "agentDeduction": "排查房源是否存在生效中的租客出租合同"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "托管房源存在在租租客合同，定义为“租客续约/在租”，直接关单"
+  },
+  "durationMs": 3,
+  "executedAt": "2026-10-27T15:00:26.484Z"
+}

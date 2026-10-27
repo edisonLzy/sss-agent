@@ -1,0 +1,86 @@
+[
+  {
+    "id": "TC04_INTENTION_RENEW",
+    "name": "意向分流-业主明确续约",
+    "module": "意向分流",
+    "description": "业主意向为续约 (RENEW)，属于业务互斥，直接输出 command: end 提前结束",
+    "mockScenario": "intention_renew",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-004",
+      "requestId": "req-test-004"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主意向为续约",
+      "expectedToolCalls": ["query_owner_intention"]
+    }
+  },
+  {
+    "id": "TC05_INTENTION_PENDING",
+    "name": "意向分流-待业主确认",
+    "module": "意向分流",
+    "description": "业主意向尚未确定 (PENDING)，无法自动推进解约，输出 command: end 提前结束",
+    "mockScenario": "intention_pending",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-005",
+      "requestId": "req-test-005"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主续解意向尚未明确确认",
+      "expectedToolCalls": ["query_owner_intention"]
+    }
+  },
+  {
+    "id": "TC06_INTENTION_UNKNOWN",
+    "name": "意向分流-未知意向",
+    "module": "意向分流",
+    "description": "业主意向为未知意向 (UNKNOWN)，输出 command: end 提前结束",
+    "mockScenario": "intention_pending",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-006",
+      "requestId": "req-test-006"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主续解意向尚未明确确认",
+      "expectedToolCalls": ["query_owner_intention"]
+    }
+  },
+  {
+    "id": "TC07_INTENTION_AM_FOLLOW",
+    "name": "意向分流-资管线下自跟进",
+    "module": "意向分流",
+    "description": "意向标记为资管线下自跟进 (ASSET_MANAGER_FOLLOW)，输出 command: end 提前结束",
+    "mockScenario": "intention_asset_manager_follow",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-007",
+      "requestId": "req-test-007"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "资管线下自跟进",
+      "expectedToolCalls": ["query_owner_intention"]
+    }
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "testCase": {
+    "id": "TC05_INTENTION_PENDING",
+    "name": "意向分流-待业主确认",
+    "module": "意向分流",
+    "description": "业主意向尚未确定 (PENDING)，无法自动推进解约，输出 command: end 提前结束",
+    "mockScenario": "intention_pending",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-005",
+      "requestId": "req-test-005"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主续解意向尚未明确确认",
+      "expectedToolCalls": [
+        "query_owner_intention"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-005",
+        "requestId": "req-test-005"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "PENDING",
+          "intentionDesc": "待业主确认",
+          "expectedHandoverTime": null,
+          "expectedHandoverTimeDesc": "业主待确认"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "业主续解意向尚未明确确认，提前结束本次解约自动推进"
+  },
+  "durationMs": 2,
+  "executedAt": "2026-10-27T15:00:26.466Z"
+}

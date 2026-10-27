@@ -1,0 +1,28 @@
+{
+  "name": "自助解约agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx mock-server.ts",
+    "dev": "tsx watch mock-server.ts",
+    "test:mock": "tsx test-mock-server.ts",
+    "test:skill": "tsx test-skill-workflow.ts",
+    "test:am": "tsx test-asset-manager-interaction.ts",
+    "test:runner": "tsx test/runner.ts",
+    "test": "tsx test/runner.ts"
+  },
+  "keywords": [],
+  "author": "evan",
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

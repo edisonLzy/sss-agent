@@ -1,0 +1,59 @@
+{
+  "testCase": {
+    "id": "TC04_INTENTION_RENEW",
+    "name": "意向分流-业主明确续约",
+    "module": "意向分流",
+    "description": "业主意向为续约 (RENEW)，属于业务互斥，直接输出 command: end 提前结束",
+    "mockScenario": "intention_renew",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-004",
+      "requestId": "req-test-004"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "业主意向为续约",
+      "expectedToolCalls": [
+        "query_owner_intention"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-004",
+        "requestId": "req-test-004"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "RENEW",
+          "intentionDesc": "续约",
+          "expectedHandoverTime": null,
+          "expectedHandoverTimeDesc": "业主待确认"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "业主意向为续约，不在本期自助解约处理范围，提前结束自动推进"
+  },
+  "durationMs": 3,
+  "executedAt": "2026-10-27T15:00:26.464Z"
+}

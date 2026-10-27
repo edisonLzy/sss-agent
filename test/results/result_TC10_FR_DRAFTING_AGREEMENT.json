@@ -1,0 +1,83 @@
+{
+  "testCase": {
+    "id": "TC10_FR_DRAFTING_AGREEMENT",
+    "name": "首招到期-已有在途待签协议",
+    "module": "首招到期子流程",
+    "description": "原收房合同已存在审批中或待签署的解约协议，防重提前结束自动推进，输出 command: end",
+    "mockScenario": "first_recruit_drafting",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-010",
+      "requestId": "req-test-010"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "在途审批或待签署的解约协议",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-010",
+        "requestId": "req-test-010"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-010",
+        "requestId": "req-test-010"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": true,
+          "isSigned": false,
+          "agreementStatusDesc": "已盖章待签约",
+          "agreementCode": "TC_DRAFTING_888"
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "原收房合同已存在在途审批或待签署的解约协议，避免重复发起，直接关单"
+  },
+  "durationMs": 2,
+  "executedAt": "2026-10-27T15:00:26.476Z"
+}

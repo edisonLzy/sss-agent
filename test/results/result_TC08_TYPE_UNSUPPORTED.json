@@ -1,0 +1,59 @@
+{
+  "testCase": {
+    "id": "TC08_TYPE_UNSUPPORTED",
+    "name": "解约类型分流-不支持的解约类型",
+    "module": "业务类型分流",
+    "description": "业主意向明确解约，但解约类型为非本期支持的类型（如托管中途解约），输出 command: end 提前结束",
+    "mockScenario": "first_recruit_success",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "托管中途解约",
+      "sessionId": "session-test-008",
+      "requestId": "req-test-008"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "当前解约类型不在本期自动化处理范围",
+      "expectedToolCalls": [
+        "query_owner_intention"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-008",
+        "requestId": "req-test-008"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "当前解约类型不在本期自动化处理范围: 托管中途解约，提前结束本次自动推进"
+  },
+  "durationMs": 1,
+  "executedAt": "2026-10-27T15:00:26.472Z"
+}

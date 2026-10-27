@@ -1,0 +1,108 @@
+{
+  "testCase": {
+    "id": "TC11_FR_HAS_EXTENSION",
+    "name": "首招到期-存在首招延长期变更协议",
+    "module": "首招到期子流程",
+    "description": "原合同已办理或正在推进首招延长期变更，不可按到期解约，直接关单 command: end",
+    "mockScenario": "first_recruit_has_extension",
+    "fields": {
+      "orderId": 88888,
+      "contractCode": "TG20261024001",
+      "terminationType": "首招到期",
+      "sessionId": "session-test-011",
+      "requestId": "req-test-011"
+    },
+    "expected": {
+      "command": "end",
+      "nextScheduleAt": null,
+      "finalAnswer": null,
+      "reasonContains": "首招延长期变更",
+      "expectedToolCalls": [
+        "query_owner_intention",
+        "query_owner_termination_agreement",
+        "query_first_recruit_extension_agreement"
+      ]
+    }
+  },
+  "passed": true,
+  "failureReasons": [],
+  "trajectory": [
+    {
+      "stepIndex": 1,
+      "phase": "意向确认",
+      "toolName": "query_owner_intention",
+      "requestPayload": {
+        "orderId": 88888,
+        "sessionId": "session-test-011",
+        "requestId": "req-test-011"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "agentDeduction": "基于协同单 orderId 查询业主真实意向及期望交房时间"
+    },
+    {
+      "stepIndex": 2,
+      "phase": "首招到期-协议防重",
+      "toolName": "query_owner_termination_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-011",
+        "requestId": "req-test-011"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "agentDeduction": "查询收房合同是否已有已签约或在途解约协议"
+    },
+    {
+      "stepIndex": 3,
+      "phase": "首招到期-延长期排查",
+      "toolName": "query_first_recruit_extension_agreement",
+      "requestPayload": {
+        "contractCode": "TG20261024001",
+        "orderId": 88888,
+        "sessionId": "session-test-011",
+        "requestId": "req-test-011"
+      },
+      "responseResult": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidExtension": true,
+          "isConfirmed": true,
+          "extensionStatusDesc": "确认完成",
+          "extendStartDate": "2026-11-01",
+          "extendEndDate": "2026-12-31"
+        }
+      },
+      "agentDeduction": "查询原合同是否存在首招延长期变更协议"
+    }
+  ],
+  "agentOutput": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "原收房合同已办理或正在推进首招延长期变更，不可按到期解约，直接关单"
+  },
+  "durationMs": 2,
+  "executedAt": "2026-10-27T15:00:26.478Z"
+}
