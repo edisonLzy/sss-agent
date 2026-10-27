@@ -5,27 +5,26 @@
 本流程用于指导 Agent 处理**首招到期**（首次招租到期 / 招租延长期到期）场景下的业主自助解约起草任务。
 
 - **前置前提**：已通过主流程 [SKILL.md](../SKILL.md) 的运行时参数校验，且确认当前工单下业主意向为明确解约（`intention == "TERMINATE"`）。
-- **处理目标**：依次执行原收房合同解约协议防重、首招延长期变更协议排查、续约合同排查、租客在租排查、资管管家授权确认（含 2h/4h/t+1 阶梯式追问）及解约协议起草。起草成功后返回 `command: null`，按允许的群消息出口通知办理进展，等待工程侧合同事件；不在起草节点安排签约提醒。
+- **处理目标**：依次执行原收房合同解约协议防重、首招延长期变更协议排查、续约合同排查、租客在租排查、资管管家授权确认（含 2h/4h/t+1 阶梯式追问）及解约协议起草。起草成功后返回 `command: null`，按允许的群消息出口通知办理进展，本轮结束；不在起草节点安排签约提醒。
 - **返回契约**：所有流程结束与状态回传必须严格遵循 [resources/output-scheme.md](../resources/output-scheme.md) 规范。工单流转与关单由工程侧根据返回值统筹闭环。
-- **执行范围**：本 SOP 用于首次发起及起草前推进。本次已起草成功后，合同事件唤醒应按 [合同事件接续规则](../SKILL.md#合同事件接续规则) 处理，不重新执行本 SOP 的入口防重，不重复起草。
+- **执行范围**：本 SOP 只负责入口防重、前置核验及发起起草。起草接口返回后结束本轮，不查询后续合同结果，不处理合同事件、催签或回访。
 
 ---
 
 ## 依赖工具清单
 
-本子流程依赖以下 9 个核心工具。字段与接入边界见 [resources/tool-contracts.md](../resources/tool-contracts.md)；合同触发和申请查询需按合同侧文档适配，授权查询的时间字段及新增意图保存工具待工程补齐。
+本子流程依赖以下 8 个核心工具。字段与接入边界见 [resources/tool-contracts.md](../resources/tool-contracts.md)；起草工具直接沿用合同侧名称和 DTO，待 Landlord 实现注册；入口查询沿用既有工具，授权查询的时间字段及新增意图保存工具待工程补齐。
 
 | 序号 | 工具标识 (Tool Name) | 工具类型 | 用途说明 |
 | :---: | :--- | :---: | :--- |
-| 1 | [`query_owner_termination_agreement`](../resources/tool-contracts.md#query_owner_termination_agreement) | 读查询 | 起草前查询收房合同是否已有解约协议，避免重复起草 |
+| 1 | [`query_owner_termination_agreement`](../resources/tool-contracts.md#query_owner_termination_agreement) | 读查询 | 沿用既有工具，查询是否已有有效解约协议，避免重复起草 |
 | 2 | [`query_first_recruit_extension_agreement`](../resources/tool-contracts.md#query_first_recruit_extension_agreement) | 读查询 | 查询原合同是否存在首招延长期变更确认/协议（延长期排查） |
 | 3 | [`query_owner_renewal_agreement`](../resources/tool-contracts.md#query_owner_renewal_agreement) | 读查询 | 查询原合同是否已发起续约合同（续约互斥排查） |
 | 4 | [`query_tenant_contract`](../resources/tool-contracts.md#query_tenant_contract) | 读查询 | 查询当前房源是否存在有效租客租赁合同（在租互斥排查） |
 | 5 | [`query_asset_manager_authorization`](../resources/tool-contracts.md#query_asset_manager_authorization) | 读查询 | 查询联系状态、资管授权意图及工具计算的下次联系时间 `nextContactAt` |
 | 6 | [`contact_zuwu_and_asset_manager`](../resources/tool-contracts.md#contact_zuwu_and_asset_manager) | 写操作 | 私聊资管经理（咨询授权/2h/4h/t+1 追问及拒绝追问原因） |
-| 7 | [`draft_owner_termination_agreement`](../resources/tool-contracts.md#draft_owner_termination_agreement) | 写操作 | 向合同系统发起起草首招到期业主解约协议请求 |
+| 7 | [`triggerAutoTermination`](../resources/tool-contracts.md#triggerautotermination) | 写操作 | 向合同系统发起起草首招到期业主解约协议请求 |
 | 8 | `save_asset_manager_authorization`（暂定，待接入） | 写操作 | 保存识别到的资管意图、原因及可空的下次联系时间 |
-| 9 | [`query_owner_termination_auto_apply`](../resources/tool-contracts.md#query_owner_termination_auto_apply)（目标 Tool，待注册） | 读查询 | 适配 `queryAutoTermination`，精确查询本次申请的状态及失败原因 |
 
 ---
 
@@ -35,8 +34,7 @@
 flowchart TD
     Start["进入首招到期解约子流程"] --> Step1["步骤 1: 检查业主解约协议<br/>query_owner_termination_agreement"]
     
-    Step1 -->|"已签约 (isSigned=true)"| EndSigned["Return(command='end', finalAnswer='@业主...')<br/>已签约，致谢并问不合作原因关单"]
-    Step1 -->|"首次发起已有在途审批/待签"| EndDrafting["Return(command='end')<br/>防重结束本次发起，不催签"]
+    Step1 -->|"已有有效解约协议"| EndDrafting["Return(command='end')<br/>防重结束本次发起，不催签"]
     Step1 -->|"无有效解约协议"| Step2_1["步骤 2.1: 检查首招延长期变更协议<br/>query_first_recruit_extension_agreement"]
     
     Step2_1 -->|"存在延长期变更"| EndExtension["Return(command='end')<br/>正在办理或已生效延长期，直接关单"]
@@ -57,8 +55,8 @@ flowchart TD
     Step3 -->|"未联系 / 未回复且未达追问上限"| AMSchedule["调用联系工具，读取下次联系时间<br/>Return(command='schedule')"]
     Step3 -->|"未回复且工具确认追问耗尽"| AMTimeout["Return(command='end')<br/>定义为资管未回复，结束工单"]
     
-    Step4 -->|"起草成功"| DraftSuccess["Return(command=null, nextScheduleAt=null)<br/>通知办理进展，等待工程侧合同事件"]
-    Step4 -->|"明确前置业务校验失败"| DraftBlocked["Return(command='end')<br/>记录合同侧原因，结束本次推进"]
+    Step4 -->|"起草成功"| DraftSuccess["Return(command=null, nextScheduleAt=null)<br/>通知办理进展，本轮结束"]
+    Step4 -->|"申请失败/明确业务校验不通过"| DraftBlocked["Return(command='end')<br/>记录合同侧原因，结束本次推进"]
     Step4 -->|"技术异常或结果不确定"| DraftError["Return(command='transfer_to_human')<br/>停止重复起草，转人工核验"]
 ```
 
@@ -66,12 +64,12 @@ flowchart TD
 
 ## 详细执行步骤
 
-### 步骤 1：检查业主解约协议（防重核查）
+### 步骤 1：检查业主解约协议（入口防重）
 
-调用查询工具排查收房合同当前是否已有解约协议，避免重复发起：
+沿用现有 `query_owner_termination_agreement` 工具及原参数：
 
 ```text
-Call({
+agreementResult = Call({
   name: "query_owner_termination_agreement",
   payload: {
     contractCode: {{fields.contractCode}},
@@ -82,28 +80,9 @@ Call({
 })
 ```
 
-**决策分支**：
-1. **已签约生效（`hasValidAgreement == true && isSigned == true`）**：
-   原收房合同已完成解约协议签署，属于业务终态达成。通过 `finalAnswer` 向企微业主群发送签约办结与致谢消息，并询问不合作原因，输出 `command: "end"` 关单：
-   ```json
-   Return({
-     "command": "end",
-     "nextScheduleAt": null,
-     "finalAnswer": "@业主 您好，您的房屋首招到期解约协议已确认签署完成，解约手续已全部办结。感谢您一直以来对我们的信任与支持，祝您生活愉快！请问本次不再合作的主要原因是什么呢？您的宝贵建议对我们至关重要。",
-     "reason": "原收房合同解约协议已签署完成，发送服务合作致谢祝福及不合作原因回访，流程完结直接关单"
-   })
-   ```
-2. **在途推进中（`hasValidAgreement == true && isSigned == false`）**：
-   首次发起时已有正在审批或待签约的解约协议，避免重复起草，结束本次发起任务；此处不催业主签约。该分支不用于本次已起草成功后的合同事件恢复，不能用它结束原来正在等待事件的推进单：
-   ```json
-   Return({
-     "command": "end",
-     "nextScheduleAt": null,
-     "finalAnswer": null,
-     "reason": "首次发起发现原收房合同已有在途审批或待签署的解约协议，防重结束本次发起"
-   })
-   ```
-3. **无有效协议（`hasValidAgreement == false`）**：进入步骤 2。
+- **查询成功且 `data.hasValidAgreement == true`**：已有有效解约协议，不重复发起起草；返回 `end`、`nextScheduleAt=null`、`finalAnswer=null`，记录协议现状。不论已签约还是在途，本期均不发送催签、致谢或回访消息。
+- **查询成功且 `data.hasValidAgreement == false`**：进入步骤 2。
+- **查询异常、空响应或字段不明确**：不能当作无协议放行，按读操作异常规则处理，仍无法确认时转人工。
 
 ---
 
@@ -432,11 +411,11 @@ Call({
 
 ### 步骤 4：发起起草业主解约协议（写操作）
 
-拿到资管确认结论后，调用 Tool 适配合同侧 `triggerAutoTermination`。先检查上游已提供有效的 `{{fields.backDate}}`（`yyyy-MM-dd`），缺失或格式非法时不调用写接口，返回 `transfer_to_human` 说明原因。首招到期使用合同侧 `terminationType: 7`；适配层将还房日转为统一业务时区当天零点的 `java.util.Date`。
+拿到资管确认结论后，直接调用合同侧 `triggerAutoTermination`。先确认上游已按合同 DTO 提供 `{{fields.backDate}}`；缺失时不调用写接口，返回 `transfer_to_human`。首招到期使用合同侧 `terminationType: 7`，还房日按统一业务时区当天零点的 `Date` 原样透传。
 
 ```text
 draftResult = Call({
-  name: "draft_owner_termination_agreement",
+  name: "triggerAutoTermination",
   payload: {
     contractId: {{fields.contractId}},
     terminationType: 7,
@@ -445,49 +424,22 @@ draftResult = Call({
 })
 ```
 
-**决策分支**：
-1. **已生成协议且继续办理（有效 `data.autoApplyId`、`data.applyStatus == 1` 且 `data.terminationContractId` 非空有效）**：
-   返回 `command: null`、`nextScheduleAt: null` 结束本轮，等待工程侧投递合同后续事件。需要且允许群发时，通过 `finalAnswer` 播报办理进展；否则 `finalAnswer` 为 `null`：
+**返回处理**（直接读取原生响应，不使用 `.data` 包装）：
+
+1. **有效 `autoApplyId` 且 `applyStatus=1/2`**：返回 `command: null`、`nextScheduleAt: null` 结束本轮，不再查询合同结果，后续办理交工程侧。`applyStatus=1` 且已有 `terminationContractId` 时，可通过允许的群消息出口播报：
    ```json
    Return({
      "command": null,
      "nextScheduleAt": null,
-     "finalAnswer": "@业主 您好，您的首招到期解约协议已起草，目前正在办理后续流程，请您耐心等待。可签署时会再通知您。",
-     "reason": "首招解约协议起草成功，本轮结束，等待工程侧投递合同后续事件"
+     "finalAnswer": "@业主 您好，您的首招到期解约协议已起草，目前正在办理后续流程，请您耐心等待。",
+     "reason": "首招到期解约协议起草成功，本轮结束，后续办理交工程侧"
    })
    ```
-   工程侧持久化申请关联和当前阶段，后续事件按当前进度接续。此时不催签、不安排 t+2/t+3 调度、不再次查询协议或发起起草；发送业主完成后的通知及签署结果处理，遵循主 Skill 的合同事件接续规则。
+   尚无协议 ID 时只能说“申请已受理”；`applyStatus=2` 仅表示发送业主操作完成，不作已签署判定。不需要或不允许群发时 `finalAnswer=null`。
 
-2. **申请失败（`data.applyStatus == 3`）**：
-   先按本次申请 ID 查询详情，不把调用正常返回当作业务成功，也不固定依赖网关错误码 `1007`：
-   ```text
-   queryResult = Call({
-     name: "query_owner_termination_auto_apply",
-     payload: { autoApplyId: draftResult.data.autoApplyId }
-   })
-   ```
-   查询确认 `applyStatus=3`、`terminationContractId=null`、处于准备/起草节点，且 `reasonCode=1/2` 明确为前置业务校验失败时，不重试，输出 `command: "end"`，由工程侧结束本次推进。`reason` 必须包含查询返回的实际原因，不自动改还房日；例如：
-   ```json
-   Return({
-     "command": "end",
-     "nextScheduleAt": null,
-     "finalAnswer": null,
-     "reason": "合同起草前置业务校验不通过：待账单支付成功后再发起解约"
-   })
-   ```
+2. **合同明确业务校验不通过，或返回 `applyStatus=3/4`**：按 [起草返回处理](../resources/tool-contracts.md#起草返回处理) 输出 `end`、`nextScheduleAt=null`、`finalAnswer=null`，记录实际错误或返回的申请 ID、状态及节点。本期不追加失败详情查询；原生四字段响应没有返回具体原因时，不编造“前置校验失败”的原因。
 
-3. **其他状态、技术异常或结果不确定**：
-   统一按 [自动申请结果处理](../resources/tool-contracts.md#自动申请结果处理) 分流：`applyStatus=1` 但尚无协议 ID 时返回 `null` 等待，只能播报“申请已受理”；`2` 进入工程侧发送完成通知分支；`4` 停止自动办理、转人工。查询确认的审核驳回、执行失败或无法确认结果的异常保留原因转人工，不笼统 `end`。
-
-   触发超时且没有申请 ID 时，先调用申请查询工具，只传 `contractId: {{fields.contractId}}`；已知申请 ID 时只传 `autoApplyId`。两者恰传一个，不能盲目重复起草。查询仍无法确认时：
-   ```json
-   Return({
-     "command": "transfer_to_human",
-     "nextScheduleAt": null,
-     "finalAnswer": "@业主 您好，系统办理过程中出现微小异常，已为您转接人工服务管家跟进处理，请稍候。",
-     "reason": "合同起草接口技术异常或结果不确定，停止重复起草，转人工服务管家核验"
-   })
-   ```
+3. **技术异常、超时或结果不确定**：停止重复触发，输出 `transfer_to_human` 并记录实际报错，不将未知结果当作业务校验失败。工程侧核验不属于本期 Skill。
 
 ---
 
@@ -495,8 +447,7 @@ draftResult = Call({
 
 | 步骤 | 命中条件 | 返回 Command | nextScheduleAt | finalAnswer | 核心处理语义 |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| **1. 解约防重** | `hasValidAgreement && isSigned` | `end` | `null` | `@业主 致谢+问原因` | 已签约完成，办结关单 |
-|  | 首次发起时 `hasValidAgreement && !isSigned` | `end` | `null` | `null` | 防重结束本次发起；合同事件恢复不走此分支 |
+| **1. 解约防重** | 查询成功且 `hasValidAgreement=true` | `end` | `null` | `null` | 不重复起草，记录已有协议状态 |
 | **2. 冲突排查** | `hasValidExtension` (首招延长期) | `end` | `null` | `null` | 正在办理或已生效延长期，直接关单 |
 |  | `hasValidRenewal` (业主续约) | `end` | `null` | `null` | 定义为“业主续约”，直接关单 |
 |  | `hasValidTenantContract` (租客在租) | `end` | `null` | `null` | 定义为“租客续约/在租”，直接关单 |
@@ -508,6 +459,6 @@ draftResult = Call({
 |  | 无法识别有效意图 | `null` | `null` | `null` | 私聊澄清，等待回复 |
 |  | 未联系 / 未回复且未达追问上限 | `schedule` | 授权查询工具返回时间 | `null` | 联系资管，等待回复；次数和时间由工具维护 |
 |  | 未回复且工具确认三次追问耗尽 | `end` | `null` | `null` | 定义为“资管未回复”，结束工单 |
-| **4. 协议起草** | `applyStatus=1`、有效申请 ID、协议 ID 非空 | `null` | `null` | 允许群发时播报办理进展，否则 `null` | 本轮结束，等待工程侧合同事件；不安排催签 |
-|  | `applyStatus=3` 且查询确认前置业务校验失败 | `end` | `null` | `null` | 记录查询返回原因，结束本次推进 |
+| **4. 协议起草** | `applyStatus=1/2`、有效申请 ID | `null` | `null` | 按实际状态播报办理进展；不需群发时 `null` | 本轮结束，后续办理交工程侧 |
+|  | 合同明确业务校验不通过或 `applyStatus=3/4` | `end` | `null` | `null` | 记录实际返回信息，结束本次发起 |
 |  | 技术异常或结果不确定 | `transfer_to_human` | `null` | `@业主 转人工...` | 不盲目重试，转人工核验 |

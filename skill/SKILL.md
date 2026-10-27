@@ -1,13 +1,13 @@
 ---
 name: owner-self-termination
-description: 处理业主首招到期和委托到期的自助解约任务，统一检查业主续解意向，按解约类型分流并加载对应流程，涵盖交割核验、资管确认、协议起草与签约跟进回访，最终返回结构化执行结果。本期不处理续约和中途解约。
+description: 处理业主首招到期和委托到期的自助解约起草任务，核验意向、合同冲突、交割及资管授权，直接调用合同侧接口发起起草并返回结果。本期不处理起草后的结果跟进、签约通知、续约和中途解约。
 ---
 
 # 业主自助解约（owner-self-termination）
 
 ## 目标
 
-本 Skill 用于支撑房屋托管业务中业主在“首招到期”与“委托到期”场景下的自动化解约流转。首次发起阶段完成必要运行参数与业主意向校验、交割及物损核验、资管授权确认（含 2h/4h/t+1 阶梯式追问）和解约协议起草。起草成功后返回 `command: null` 结束本轮，等待工程侧投递合同后续事件；起草节点不安排签约提醒。后续签约通知、跟进及回访按工程侧确认的合同事件和当前业务阶段接续处理。
+本 Skill 处理首招到期和委托到期的解约起草发起：完成入口防重、业务前置核验和资管授权后，直接调用合同侧 `triggerAutoTermination`。起草成功返回 `command: null`，本轮结束，后续办理交工程侧。本期不执行起草后的合同结果查询、事件接续、催签或回访。
 
 - **业务场景**：首招到期解约、委托到期解约。
 - **业务边界**：本期明确**不处理续约流程**（若意向为续约则输出 `end` 提前结束任务），且**不处理中途解约**（如托管中途解约、首次招租中途解约）。
@@ -22,9 +22,9 @@ description: 处理业主首招到期和委托到期的自助解约任务，统�
 | :--- | :--- | :---: | :--- |
 | `{{fields.orderId}}` | Long | 是 | 续解业务协同工单 ID，用于意向查询与全流程工单串联 |
 | `{{fields.contractCode}}` | String | 是 | 业主原收房合同编号（托管合同编号），用于协议防重与交割查询 |
-| `{{fields.contractId}}` | Long | 是 | 大于 0 的业主原收房合同主键 ID，用于触发及查询合同自动解约申请；与 `contractCode` 分别传入 |
+| `{{fields.contractId}}` | Long | 是 | 大于 0 的业主原收房合同主键 ID，用于触发合同自动解约起草；与 `contractCode` 分别传入 |
 | `{{fields.terminationType}}` | String | 是 | 解约类型描述，本期仅支持 `首招到期` 或 `委托到期` |
-| `{{fields.backDate}}` | String | 起草时必填 | 上游确认的还房日，`yyyy-MM-dd`；适配层按业务时区转为合同 DTO 的 `Date` |
+| `{{fields.backDate}}` | Date | 起草时必填 | 上游按合同 DTO 提供的还房日，统一业务时区当天零点，原样透传 |
 | `{{fields.executionId}}` | Long | 否 | 业主解约推进事实记录 ID，有值时优先作为资管授权推进查询与催办的入参 |
 | `{{fields.sessionId}}` | String | 否 | 会话链路追踪 ID，有值时原样透传给各工具 |
 | `{{fields.requestId}}` | String | 否 | 请求链路追踪 ID，有值时原样透传给各工具 |
@@ -57,12 +57,12 @@ description: 处理业主首招到期和委托到期的自助解约任务，统�
    })
    ```
 
-3. **合同工具以合同侧文档为准**：
-   `draft_owner_termination_agreement` 适配原生 `triggerAutoTermination`，仅传 `contractId/terminationType/backDate`；`query_owner_termination_auto_apply` 适配 `queryAutoTermination`，按申请 ID 精确查询结果。两者为 [tool-contracts.md](resources/tool-contracts.md#draft_owner_termination_agreement) 中的目标契约，需工程完成适配与注册。若实际可用工具仍只有旧 `type/reason/agreementId` 定义，停止调用并转人工说明契约未对齐，不用旧字段绕过。
+3. **直接使用合同侧工具名称和 DTO**：
+   入口防重沿用现有 `query_owner_termination_agreement` 及其原参数。发起起草直接调用合同侧 `triggerAutoTermination`，只传 `contractId/terminationType/backDate`，直接读取原生响应的 `autoApplyId/terminationContractId/applyStatus/currentNode`，不设置工具别名或 Draft 协议转换。起草工具待 Landlord 实现、注册，定义见 [tool-contracts.md](resources/tool-contracts.md#triggerautotermination)。
 
 ## 工作流程
 
-以下步骤与两份 Reference SOP 定义首次发起及起草前的业务推进。已成功起草后的合同事件唤醒，按下方“合同事件接续规则”处理，不重新从首次发起入口执行。
+以下步骤与两份 Reference SOP 只覆盖首次发起及起草前推进，执行到起草接口返回即结束本轮。
 
 ```mermaid
 flowchart TD
@@ -77,16 +77,7 @@ flowchart TD
     TypeCheck -->|"首招到期"| LoadFirstRecruit["4. 加载首招解约子流程<br/>references/first-recruit-termination.md"]
     TypeCheck -->|"委托到期"| LoadEntrusted["4. 加载委托解约子流程<br/>references/entrusted-termination.md"]
     TypeCheck -->|"其他/中途解约"| EndUnsupported["Return(command='end')<br/>非本期支持的解约类型，提前结束"]
-
-    ContractEvent["工程侧投递已关联的合同事件"] --> ContinueStage["按当前合同阶段接续处理<br/>跳过首次发起入口，不重复起草"]
 ```
-
-### 合同事件接续规则
-
-- 工程侧负责持久化 `autoApplyId`、`terminationContractId` 与当前推进单的关联、当前阶段及工具执行结果，并在事件到达后注入可信运行上下文。复用同一会话不等于自动跳过已完成步骤。
-- 本次推进已起草成功后，合同事件唤醒不重新查询首次发起意向、不进入入口“已有在途协议则 `end`”分支，也不重复调用起草工具；根据工程侧确认的事件与当前阶段继续处理。
-- 起草、审核中、审核通过或盖章完成都不能单独触发业主催签。工程侧核验“发送业主操作完成”（合同事件 `1108`）后，再进入业主签约通知分支；后续签署结果以合同事件 `1310` 及工程侧查询确认的实际签约事实为准。
-- 签约提醒的日期基准、次数和唤醒时间由后续签约跟进规则确定，不从起草成功时刻直接推算 t+2/t+3。事件重复或乱序时，工程侧按当前事实及消息关联幂等处理，Agent 不自行回退到起草阶段。
 
 ### 1. 前置校验必要运行参数
 
@@ -185,8 +176,8 @@ Call({
 ## 安全护栏（Guardrails）
 
 1. **写操作安全与准入判定**：
-   - 起草协议写接口（`draft_owner_termination_agreement`）调用前必须满足全部前置条件：业主意向确认解约（`TERMINATE`）、资管明确同意（`AGREE_DRAFT`）、无在途冲突协议，且委托到期场景下租客交割已完成且无物损（`canProceedTermination == true`）。
-   - 触发响应 `applyStatus=3` 时，先用返回的 `autoApplyId` 调用申请查询工具获取失败详情。查询确认尚未生成协议、在准备/起草节点因 `reasonCode=1/2` 前置业务校验失败时，输出 `command: "end"`，`reason` 记录合同侧实际原因；不自动改日期重试、不安排后续调度。不能把网关 `errno="0"` 当作业务成功，或把 `1007` 固定当作合同侧前置失败码。
+   - 起草协议写接口（`triggerAutoTermination`）调用前必须满足全部前置条件：业主意向确认解约（`TERMINATE`）、资管明确同意（`AGREE_DRAFT`）、无在途冲突协议，且委托到期场景下租客交割已完成且无物损（`canProceedTermination == true`）。
+   - 合同明确返回前置业务校验不通过或自动申请失败/人工终止时，按 [起草返回处理](resources/tool-contracts.md#起草返回处理) 输出 `end`，记录接口实际返回的原因及申请、节点信息；本期不追加失败详情查询，不编造原生响应未返回的原因。
    - 技术异常、未接入、超时或结果不确定不按业务校验失败处理。不得盲目重试起草；无法按工具契约确认结果或自动恢复时，输出 `command: "transfer_to_human"`，保留原始报错。具体异常及参数修正规则见 [resources/tool-contracts.md](resources/tool-contracts.md)。
 
 2. **读操作异常分级治理**：
@@ -201,42 +192,23 @@ Call({
 4. **单据与会话流转由工程侧闭环**：
    - 模型端不调用任何关单工具或转人工工具；
    - 工程侧消费 `command: "end"` 或 `command: "transfer_to_human"` 后，按运行用途处理业务终止或人工接管；是否释放会话由工程侧契约决定，不能把业务结束等同于销毁 Agent 会话。
-   - 起草成功后的 `command: null` 只结束本轮，不关闭推进单、不新增定时调度；工程侧继续处理该申请的合同事件。
+   - 起草成功后的 `command: null` 只结束本轮，不关闭推进单、不新增定时调度；后续合同办理由工程侧负责。
 
 ## 完成判定
 
-1. **起草成功判定（本轮结束，等待合同事件）**：
-   - 触发返回有效 `autoApplyId`、`applyStatus=1` 且 `terminationContractId` 非空有效时，确认协议已生成且后续流程执行中；这不代表审核通过、已发送业主或已签约。`currentNode` 是当前阶段，不能单独证明节点完成；
-   - 输出 `command: null`、`nextScheduleAt: null`，通过允许的群消息出口播报办理进展；无需播报或当前运行用途不允许群发时，`finalAnswer` 为 `null`：
-     ```json
-     Return({
-       "command": null,
-       "nextScheduleAt": null,
-       "finalAnswer": "@业主 您好，您的解约协议已起草，目前正在办理后续流程，请您耐心等待。可签署时会再通知您。",
-       "reason": "起草成功，本轮结束，等待工程侧投递合同后续事件"
-     })
-     ```
-   - 此节点不输出 `schedule`，不安排 t+2/t+3 催签；工程侧保存当前进度，后续按“合同事件接续规则”唤醒。
-   - `applyStatus=1` 但尚无 `terminationContractId` 时同样返回 `null` 等待，只能播报“申请已受理、正在办理”；`applyStatus=2` 则交工程侧核验发送完成并进入通知分支。`3/4`、响应异常及查询后的处理统一遵循 [自动申请结果处理](resources/tool-contracts.md#自动申请结果处理)，不能用旧 `agreementId` 判断。
+1. **起草成功或申请执行中**：
+   - `triggerAutoTermination` 返回有效 `autoApplyId`，且 `applyStatus=1/2` 时，输出 `command: null`、`nextScheduleAt: null`，不再调用合同查询，也不安排催签。
+   - `applyStatus=1` 且 `terminationContractId` 非空时，允许通过群消息出口播报“协议已起草、后续办理中”；尚无协议 ID 时只能说明“申请已受理”。`applyStatus=2` 仅表示已发送业主，本 Skill 不处理签约通知或推断实际签署。
+   ```json
+   Return({
+     "command": null,
+     "nextScheduleAt": null,
+     "finalAnswer": "@业主 您好，您的解约协议已起草，目前正在办理后续流程，请您耐心等待。",
+     "reason": "起草成功，本轮结束，后续办理交工程侧"
+   })
+   ```
+   不需要或不允许群发时，`finalAnswer=null`。工程侧持久化原生返回信息，后续结果处理不属于本期 Skill。
 
-2. **前置互斥与异常关单判定**：
-   - 当遇到续约意向（`RENEW`）、房源在租、存在有效延长期、交割物损或资管明确线下跟进时，属于业务正常终态或互斥阻断，输出 `command: "end"`，由工程侧统一关闭工单：
-     ```json
-     Return({
-       "command": "end",
-       "nextScheduleAt": null,
-       "finalAnswer": null,
-       "reason": "房源已存在有效续约合同，与解约流程互斥，直接关单"
-     })
-     ```
-
-3. **最终签约办结判定（签约完成与回访关单）**：
-   - 业主完成解约协议签署（`isSigned == true`）时，下发服务合作致谢与祝福，并向业主追问不合作原因，输出 `command: "end"` 办结关单：
-     ```json
-     Return({
-       "command": "end",
-       "nextScheduleAt": null,
-       "finalAnswer": "@业主 您好，您的房屋解约协议已确认签署完成，感谢您一直以来对省心租的信任与陪伴，祝您生活愉快！请问本次不再合作的主要原因是什么呢？期待您的宝贵反馈。",
-       "reason": "业主已完成解约协议签署，发送服务合作致谢祝福及不合作原因回访，全流程闭环关单"
-     })
-     ```
+2. **业务阻断或发起失败**：
+   - 入口查到已有有效解约协议、续约或在租等互斥条件时，输出 `end`，记录原因；合同原生响应的失败和人工终止也按“起草返回处理”结束本次发起。
+   - `end` 表示本次发起任务结束，不代表合同已解约或业主已签署。

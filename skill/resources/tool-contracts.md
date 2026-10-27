@@ -1,6 +1,6 @@
 # 业主续解自动化 Tool 契约
 
-本文件记录 Skill 使用的 Tool 名称、输入输出字段及语义规范。合同自动解约触发与申请查询以[合同侧接入文档第八章](https://beike.feishu.cn/wiki/WbCRw07TziVLWIkbnJIcUnEcnFd)为准，以下为需工程适配、注册的目标契约，不表示已上线。其余工具沿用既有定义。字段名须严格原样使用，不得沿用与合同文档冲突的 Landlord 预留字段。
+本文件记录 Skill 使用的 Tool 名称、输入输出字段及语义规范。合同自动解约起草以[合同侧接入文档第八章](https://beike.feishu.cn/wiki/WbCRw07TziVLWIkbnJIcUnEcnFd)为准，起草工具直接沿用合同侧名称与原生 DTO，待 Landlord 实现注册，不表示已上线。其余工具沿用既有定义。字段名须严格原样使用，不得沿用与合同文档冲突的 Landlord 预留字段。
 
 ---
 
@@ -14,9 +14,8 @@
 7. [query_owner_delivery_checklist（查询业主解约交割清单及物损）](#query_owner_delivery_checklist)
 8. [query_owner_intention（查询业主续解意向）](#query_owner_intention)
 9. [query_asset_manager_authorization（查询资管同意发起授权）](#query_asset_manager_authorization)
-10. [draft_owner_termination_agreement（起草业主解约协议）](#draft_owner_termination_agreement)
-11. [query_owner_termination_auto_apply（查询合同自动解约申请）](#query_owner_termination_auto_apply)
-12. [contact_zuwu_and_asset_manager（联系租务和资管）](#contact_zuwu_and_asset_manager)
+10. [triggerAutoTermination（发起自动解约起草）](#triggerautotermination)
+11. [contact_zuwu_and_asset_manager（联系租务和资管）](#contact_zuwu_and_asset_manager)
 
 ---
 
@@ -27,7 +26,9 @@
 - `sessionId` (String): 会话 ID，用于大模型交互链路全流程追踪。
 - `requestId` (String): 请求 ID，用于后端日志检索与排查。
 
-### 2. 统一响应外层结构 (ResponseResult)
+### 2. 既有工具响应外层结构 (ResponseResult)
+
+此包装适用于既有查询和联系工具；本次合同侧 `triggerAutoTermination` 直接使用原生响应。
 ```json
 {
   "errno": "0",
@@ -289,86 +290,36 @@
 
 ---
 
-## draft_owner_termination_agreement
+## triggerAutoTermination
 
-**功能简介**：
-沿用此 Skill Tool 标识，目标适配合同侧 `ContractInTerminationAutoApplyFacade.triggerAutoTermination(InTerminationAutoApplyReq)`，返回 `InTerminationAutoApplyResp`。该接口同步完成准备和起草，后续提交、签前审核、盖章、发送业主异步推进。
+直接使用合同侧 `ContractInTerminationAutoApplyFacade.triggerAutoTermination(InTerminationAutoApplyReq)`，返回 `InTerminationAutoApplyResp`。接口同步准备和起草，后续提交、审核、盖章、发送由合同侧异步推进。本期 Skill 到发起返回为止。
 
-**权威接口与接入边界**：
-- Facade 为 `com.ke.home.trusteeship.contract.api.facade.ContractInTerminationAutoApplyFacade`，字段及类型以合同文档第八章接入定义为准。
-- 原生 Dubbo 直接返回响应对象；无法受理的参数、鉴权、主合同不存在或参数冲突等请求抛业务异常。若 Tool 网关沿用本文 `ResponseResult` 包装，原生响应放在 `data` 中；`errno="0"` 只表示调用返回，业务结果必须继续读取 `applyStatus/currentNode`。
-- 不再使用旧的 `type`、合同申请 `reason` 或 `agreementId`。`sessionId/requestId` 由工程运行上下文承担追踪，不作为合同 DTO 的业务入参。不得向原生接口添加外部请求唯一标识、操作人、费用或银行账户参数。
-- 本次只修订 Skill 契约。Landlord 的起草实现仍是待接入占位，目标 Tool 的适配和查询 Tool 注册完成后方可执行；未接入时按技术异常处理，不能退回旧字段或模拟成功。
+名称与请求、响应直接按合同文档第八章，不引入 Draft 协议、工具别名或额外响应包装。以下接口待 Landlord 实现并注册。
 
-**输入参数（Skill Tool 的 JSON 约定 → 原生 DTO）**：
-| 参数名 | 类型 | 必填 | 说明 |
+**输入参数（原生 DTO）**：
+
+| 参数名 | Java 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
-| `contractId` | Long | **是** | 大于 0 的收房主合同 `contract` 表主键，取自 `{{fields.contractId}}`，不能用合同编号代替 |
-| `terminationType` | Integer | **是** | 合同侧枚举：`1`=合同到期（委托到期）；`7`=招租期届满招租失败（首招到期）。不得传业务描述字符串或 Landlord 本地类型 `2` |
-| `backDate` | Tool JSON 为 String；原生 DTO 为 `java.util.Date` | **是** | Skill 传上游确认的 `{{fields.backDate}}`（`yyyy-MM-dd`）；适配层按统一业务时区 `Asia/Shanghai` 转为该日零点的 `Date`。以第八章 DTO 定义为准，不能将第六章字符串示例直接当作 Dubbo 类型 |
+| `contractId` | Long | 是 | 大于 0 的收房主合同主键，原样传 `{{fields.contractId}}` |
+| `terminationType` | Integer | 是 | `1`=合同到期（委托到期）；`7`=招租期届满招租失败（首招到期） |
+| `backDate` | java.util.Date | 是 | 上游按统一业务时区 `Asia/Shanghai` 当天零点提供，原样传 `{{fields.backDate}}`；模型不自行转日期或猜还房日 |
 
-还房日缺失或格式不合法时先停止调用、转人工核验，不用今天、触发日或首招结束日填充。日期是否合法由合同侧按业务规则校验，模型不自行修正运行时字段。
-
-**输出参数 (Response / Data)**：
-| 字段名 | 类型 | 说明及取值语义 |
-| :--- | :--- | :--- |
-| `autoApplyId` | Long | 本次自动申请 ID；重复调用命中已有申请时返回同一申请 ID |
-| `terminationContractId` | Long 或 null | 解约协议 ID；尚未生成时为 null，生成后保留 |
-| `applyStatus` | Integer | `1`执行中、`2`发送业主操作完成、`3`失败、`4`人工终止。`2` 不表示业主已签署 |
-| `currentNode` | Integer | 当前或停止节点：`1`准备、`2`起草、`3`完善及提交、`4`签前审核、`5`盖章、`6`发送业主；不是该节点已完成的独立证明 |
-
-### 自动申请结果处理
-
-以下规则适用于触发返回与查询返回；所有 `Return` 仍为 `command/nextScheduleAt/finalAnswer/reason` 四字段，非 `schedule` 时 `nextScheduleAt=null`。
-
-| 已确认的申请事实 | 本轮处理 |
-| :--- | :--- |
-| 有效 `autoApplyId`、`applyStatus=1` 且 `terminationContractId` 非空有效 | 已生成协议并继续办理，返回 `command=null`；允许群发时播报“协议已起草，后续办理中”，等待工程事件，不安排催签 |
-| 有效 `autoApplyId`、`applyStatus=1`，`terminationContractId=null` | 仅确认申请执行中，返回 `command=null`，等待工程事件；如需播报只说“申请已受理、正在办理”，不能声称已起草成功 |
-| `applyStatus=2` | 已发送业主。交工程侧核验并按可信 `OWNER_NOTIFY` 用途处理，不回退播报起草进展，也不能当作实际签署后办结 |
-| `applyStatus=3` | 先用该次 `autoApplyId` 查询详情，按下列失败分类处理；不能仅凭触发返回就笼统 `end` 或转人工 |
-| `applyStatus=4` | 人工终止，停止自动办理及重试，输出 `transfer_to_human` 并记录查询到的原因；工程侧幂等处理人工接管，避免重复分配 |
-| 快照缺失、枚举未知、ID 不合法或状态相互矛盾 | 不推断成功或前置失败；查询核验，仍不能确认则转人工，禁止盲目再起草 |
-
-**查询后的失败分类**：
-- `applyStatus=3`、`terminationContractId=null`，且查询明确为起草前置业务校验失败（准备/起草节点，`reasonCode=1` 或 `2`）时，返回 `command="end"`、`finalAnswer=null`，`reason` 原样保留合同侧原因。若返回完整 `backDateRange`，由工程侧记录供核验；本次不自动改日期重试。
-- 签前审核驳回（`reasonCode=3`）、明确执行失败（`4`）及其他不能确认的失败，按本期规则转人工，保留失败节点和原因；不因同为 `applyStatus=3` 就当成前置失败。
-- 外部操作结果不确定（`reasonCode=5`）先查询确认；仍不确定则转人工，不 `end`，不重新触发。
-- 原因码或原因缺失时不能编造。合同侧业务失败可以通过正常响应中的 `applyStatus=3` 表达，不固定依赖网关错误码 `1007`，也不从 `errmsg` 猜测业务阶段。
-
-**防重与重试**：
-- 已生成协议、申请执行中或人工终止时，不重新起草。合同侧处理中重复调用会返回同一申请快照，Skill 仍应避免无意义重复触发。
-- 触发超时且未取得 `autoApplyId` 时，先按原主合同 `contractId` 查询最新申请并核对本次关联；已知申请 ID 或消费合同事件时，必须按对应 `autoApplyId` 精确查询。
-- 本期不自动重试已受理的业务失败。合同文档允许的“未生成协议、明确失败后重新发起”需由服务管家另行明确决定，不由本 Skill 自动改日期或重放请求。未受理的明确参数错误仅按原有参数修正规则处理。
-- 未找到申请、查询异常或结果不确定不能当作“安全重试”的证明；无法确认时转人工。
-
----
-
-## query_owner_termination_auto_apply
-
-**目标 Tool，待工程注册**：适配同一 Facade 的 `queryAutoTermination(InTerminationAutoApplyQueryReq)`，返回 `InTerminationAutoApplyQueryResp`。该工具只查询自动申请，不能用已有的 `query_owner_termination_agreement` 协议查询替代。
-
-**输入参数**：
-
-| 参数名 | 类型 | 必填 | 说明 |
-| :--- | :--- | :--- | :--- |
-| `autoApplyId` | Long | 与 `contractId` 恰传一个 | 大于 0；精确查询某次申请，失败查询及消费事件时优先使用 |
-| `contractId` | Long | 与 `autoApplyId` 恰传一个 | 大于 0；按收房主合同查询最新申请，仅用于首次触发超时、未获申请 ID 等场景 |
-
-两个参数同时传、均不传、ID 非正数或没有申请记录均为业务异常；查询不会创建申请。消息处理使用消息中的申请 ID，不能以主合同最新记录替代历史申请。
-
-**输出参数（原生 DTO）**：
+**返回参数（InTerminationAutoApplyResp）**：
 
 | 字段名 | Java 类型 | 说明 |
 | :--- | :--- | :--- |
-| `autoApplyId`、`contractId` | Long | 自动申请 ID、收房主合同 ID |
+| `autoApplyId` | Long | 本次自动申请 ID；命中已有申请时返回该申请 ID |
 | `terminationContractId` | Long 或 null | 解约协议 ID，未生成时为空 |
-| `applyStatus`、`currentNode` | Integer | 与触发响应相同的申请状态、当前/停止节点 |
-| `reasonCode` | Integer 或 null | `1`还房日校验失败、`2`其他业务校验失败、`3`签前审核驳回、`4`明确执行失败、`5`外部操作结果不确定、`6`人工介入终止；以实际合同侧枚举为准 |
-| `reason` | String 或 null | 合同侧可读原因；不可用来解析日期或猜测授权 |
-| `backDateRange` | InTerminationAutoApplyBackDateRangeResp 或 null | 完整合法日期范围，子字段 `Date minBackDate`、`Date maxBackDate` 均包含当天；单日范围两者相同，无法完整计算或没有合法范围时整个对象为空 |
+| `applyStatus` | Integer | `1`执行中、`2`发送业主操作完成、`3`失败、`4`人工终止；`2`不表示业主已签署 |
+| `currentNode` | Integer | 当前或停止节点：`1`准备、`2`起草、`3`完善及提交、`4`签前审核、`5`盖章、`6`发送业主 |
 
-这里只列本流程使用的查询字段，其余响应字段见合同文档。JSON 日期由适配层按统一业务时区转换，不能假设原生 `Date` 的线上序列化格式已确认；日期范围不得返回部分边界，不解析中文原因获取日期。该工具只读，执行本文读操作重试规则。
+### 起草返回处理
+
+- 有效 `autoApplyId` 且 `applyStatus=1/2`：返回 `command=null`、`nextScheduleAt=null`，本轮结束。`applyStatus=1` 且协议 ID 非空时可播报“协议已起草”，协议 ID 为空时只能播报“申请已受理”；本 Skill 不做后续结果查询、签约通知或催签。
+- 合同明确抛出前置业务校验不通过，或原生响应 `applyStatus=3/4`：返回 `end`、`nextScheduleAt=null`、`finalAnswer=null`，结束本次发起。记录接口实际返回的错误或申请 ID、状态、节点；四字段响应不含失败原因时不自行补造。`end` 不代表合同解约成功。
+- 技术异常、超时、空响应或非法快照：不盲目重发，不当作明确业务失败；输出 `transfer_to_human`，记录实际报错。本期不为查原因再调用查询接口。
+
+原生接口直接返回响应对象；无法受理的参数、鉴权、主合同不存在或参数冲突等请求抛业务异常，不伪造申请 ID。禁止添加原生 DTO 没有的 `type/reason`、操作人、费用、银行账户或外部请求唯一标识；工程侧自行保存运行追踪。
 
 ---
 
