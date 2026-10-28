@@ -1,0 +1,211 @@
+{
+  "id": "FR_SAVE_FAILED",
+  "title": "意图保存写失败不继续起草",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "首招到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {
+    "assetManagerAuth": {
+      "assetState": "REPLIED",
+      "authorization": "UNKNOWN"
+    },
+    "toolResponses": {
+      "save_asset_manager_authorization": [
+        {
+          "errno": "1004",
+          "errmsg": "Mock：保存超时",
+          "data": null
+        }
+      ]
+    }
+  },
+  "userMessage": "可以，发吧。",
+  "expected": {
+    "command": "transfer_to_human",
+    "lastTool": "save_asset_manager_authorization",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.560223+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_termination_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.624345+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_first_recruit_extension_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidExtension": false,
+          "isConfirmed": false,
+          "extensionStatusDesc": "无延长期记录",
+          "extendStartDate": null,
+          "extendEndDate": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.687880+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_renewal_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.748497+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_tenant_contract",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.807562+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_asset_manager_authorization",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "500001",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "资管已同意起草",
+          "authorizationStatus": "AGREE",
+          "nextContactAt": null,
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:10.867430+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "save_asset_manager_authorization",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "authorization": "AGREE_DRAFT",
+        "reason": "资管在对话中明确同意起草：“可以，发吧。”",
+        "nextContactAt": null,
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "1004",
+        "errmsg": "Mock：保存超时",
+        "data": null
+      },
+      "recordedAt": "2026-10-28T08:58:10.926258+00:00"
+    }
+  ],
+  "output": {
+    "command": "transfer_to_human",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "保存资管授权意图失败（errno=1004：Mock：保存超时），结果不确定不得按同意处理，不盲目重试，转人工服务管家核验"
+  },
+  "errors": [],
+  "passed": true
+}

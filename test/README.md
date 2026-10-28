@@ -1,80 +1,36 @@
-# 业主自助解约（owner-self-termination）Skill 测试与评测体系
+# Skill 实际执行自测
 
-本目录包含针对 `owner-self-termination` Skill 的全方位评测集、测试用例、执行引擎与评测结果。
+本次由当前 Codex 对话加载 `skill/SKILL.md`、两份 SOP 和三个资源文件，作为 Agent 逐步选择工具、读取 HTTP Mock 返回，再决定下一步和最终四字段输出。没有使用旧 `runner.ts` 中写死的业务工作流。
 
-作为 **Agent Runner**，本套体系严格从**模型使用者与流程调度器**视角出发，以实际业务运行字段注入、真实请求驱动 Mock Server、记录单步决策轨迹并多维判定最终产出的合规性。
+- 测试数据：[07_live_skill_cases.json](dataset/07_live_skill_cases.json)，92 个场景，包含 3 个有第二轮消息的接续场景，共 95 轮。
+- 实际轨迹与结论：[本次报告](results/agent-run-20261028/REPORT.md)。每个用例 JSON 包含输入、工具参数、真实 Mock 响应、四字段输出和断言结果；多轮包含 `turnHistory` 和 `Resume`。
+- 记录器：`agent-session.py` 只发送 Agent 指定的动作、隔离用例、落盘和校验结果，不做业务决策，也不调用模型。因此单独运行该脚本不会自动重新执行 Skill。
+- `mock-server.ts` 补齐 `trigger_auto_termination`、`query_asset_manager_next_contact_time`，支持按用例隔离状态、错误注入、成功发送事实和虚拟时钟。
 
----
-
-## 一、目录结构与职责划分
-
-```text
-test/
-├── README.md                      # 测试集与评测框架说明文档（本文件）
-├── runner.ts                      # Agent Runner 评测调度与断言执行引擎
-├── dataset/                       # 6 大模块、25 个核心评测用例集定义
-│   ├── 01_param_validation.json   # 模块 1：前置必填参数校验用例集 (TC01-TC03)
-│   ├── 02_intention_branching.json# 模块 2：业主续解意向分流用例集 (TC04-TC07)
-│   ├── 03_type_routing.json       # 模块 3：业务场景类型分流用例集 (TC08)
-│   ├── 04_first_recruit_sop.json  # 模块 4：首招到期子流程用例集 (TC09-TC15)
-│   ├── 05_entrusted_sop.json      # 模块 5：委托到期子流程用例集 (TC16-TC20)
-│   └── 06_asset_manager_multiturn.json # 模块 6：资管确认多轮交互用例集 (TC21-TC25)
-├── trajectories/                  # Agent 执行轨迹存档（大模型原生日志 + 结构化决策链路）
-│   ├── README.md                  # 轨迹索引与详细说明
-│   ├── raw_llm_first_recruit_trajectory.jsonl
-│   ├── raw_llm_asset_manager_multiturn_trajectory.jsonl
-│   └── 01 ~ 09_*.md               # 9 篇核心场景的 Thought/Action/Observation/Deduction/Return 轨迹
-└── results/                       # 评测结果与执行轨迹落盘
-    ├── EVALUATION_REPORT.md       # 全景评测大报告（包含矩阵汇总与深度分析）
-    ├── result_TC01_PARAM_MISSING_ORDER_ID.json
-    ├── result_TC14_FR_FULL_SUCCESS.json
-    └── ...                        # 25 个 Case 的详细调用轨迹 (Trajectory) JSON
-```
-
----
-
-## 二、评测用例覆盖度（全景 25 Cases）
-
-| 模块 | 用例 ID | 覆盖业务逻辑 | 核心预期动作 |
-| :--- | :--- | :--- | :--- |
-| **1. 前置校验** | `TC01` ~ `TC03` | 缺失 `orderId` / `contractCode` / `terminationType` | 0 工具调用，直接输出 `command: transfer_to_human` |
-| **2. 意向分流** | `TC04` | 业主意向为续约 (`RENEW`) | 业务互斥提前结束，输出 `command: end` |
-| | `TC05` ~ `TC06` | 意向待确认 (`PENDING`) 或未知 (`UNKNOWN`) | 意向未明提前结束，输出 `command: end` |
-| | `TC07` | 意向标记为资管自跟进 (`ASSET_MANAGER_FOLLOW`) | 资管接管直接关单，输出 `command: end` |
-| **3. 类型分流** | `TC08` | 非本期支持类型（如“托管中途解约”） | 超出本期范围提前结束，输出 `command: end` |
-| **4. 首招子流程** | `TC09` | 存在已签约解约协议 (`isSigned=true`) | 群内发送致谢与不合作原因回访，`command: end` 办结 |
-| | `TC10` | 存在在途待签协议 (`isSigned=false`) | 防重提前关单，输出 `command: end` |
-| | `TC11` | 存在首招延长期变更协议 (`hasValidExtension=true`)| 延长期阻断到期解约，输出 `command: end` 关单 |
-| | `TC12` | 存在业主续约合同 (`hasValidRenewal=true`) | 定义为“业主续约”，输出 `command: end` 关单 |
-| | `TC13` | 存在租客在租租赁合同 (`hasValidTenantContract=true`)| 定义为“租客在租”，输出 `command: end` 关单 |
-| | `TC14` | 首招到期全流程顺利起草成功 | 资管同意起草，写接口生成协议，`command: schedule` (t+2) |
-| | `TC15` | 起草协议写接口调用失败 (网络抖动/501) | 0 次重试转人工服务管家，`command: transfer_to_human` |
-| **5. 委托子流程** | `TC16` | 存在已签约解约协议 (`isSigned=true`) | 群内发送致谢与不合作原因回访，`command: end` 办结 |
-| | `TC17` | 租客退租交割未完成 (`isDeliveryFinished=false`) | 私聊催租客交割并提醒上传业主交割单，阻断后续 |
-| | `TC18` | 租客交割已完，但业主交割单未完成 | 私聊租务催办完成业主交割单，阻断起草协议 |
-| | `TC19` | 交割清单检查存在物品损坏 (`hasDamage=true`) | 记录有物损关单，输出 `command: end`，严禁起草 |
-| | `TC20` | 委托到期全流程顺利起草成功 | 双交割无物损，资管同意起草，写接口生成协议 |
-| **6. 资管交互** | `TC21` | 资管状态为未联系 (`NOT_CONTACTED`) | 发送初次私聊，读取下次联系时间 `schedule` 挂起 |
-| | `TC22` | 资管未回复待追问 (`WAITING_REPLY`) | 私聊发送阶梯追问，读取下次追问时间 `schedule` 挂起 |
-| | `TC23` | 3 次追问耗尽 (`nextContactAt=null`) | 定义为资管未回复结束工单，输出 `command: end` |
-| | `TC24` | 资管暂不同意起草 (`DECLINE_DRAFT`) | 保存意图，私聊追问原因及是否稍后联系，`command: null` |
-| | `TC25` | 稍后联系多轮澄清闭环 | 跨轮次上下文消歧补充时间，`schedule` 挂起至约定时刻 |
-
----
-
-## 三、快速执行评测
-
-在项目根目录下执行以下命令即可启动评测引擎：
+## 使用
 
 ```bash
-# 运行 Agent Runner 评测引擎（执行全部 25 个 Case 并更新 EVALUATION_REPORT.md）
-pnpm run test:runner
-
-# 或标准命令
-pnpm test
+PORT=18742 pnpm start
+# 另一个终端：开始新执行（会重建本次目录中的用例记录）
+python3 test/agent-session.py start
+# Agent 加载 Skill 后，通过 act 传入明确的 Call/Return 动作，逐步查看返回再继续。
+# act 参数是 JSON 数组；每个 Call 包含 id/name/payload，Return 包含 id/kind/output。
+python3 test/agent-session.py status
+# 重新校验已经落盘的轨迹，不会重新运行 Agent：
+python3 test/agent-session.py recheck  # 当前保留4个失败用例，退出码为1
+python3 test/agent-session.py report
+# 独立检查Mock接口契约（不运行Agent）：
+pnpm exec tsx test/interface-contracts.ts
 ```
 
-执行完成后，可查看详细评测产物：
-- 全景评测大报告：[`test/results/EVALUATION_REPORT.md`](results/EVALUATION_REPORT.md)
-- 单用例执行轨迹：[`test/results/result_*.json`](results/)
-- 执行轨迹详报与大模型原生推理日志：[`test/trajectories/README.md`](trajectories/README.md)
+用例的 `nextTurns` 定义模拟外部消息及事实更新；Agent 使用 `Resume` 读取该消息，随后从 Skill 入口重新核验。交割接续场景重新查询两份交割清单，不能仅凭“已经完成”的聊天文本直接起草。
+
+业务时钟固定为 2026-10-28 10:00:00+08:00；所有 ID、合同与消息均为合成数据，不触及真实系统。Skill 文件哈希保存在 `skill-snapshot.json`，本次执行没有再修改 Skill。
+
+## 验证边界
+
+起草、时间查询模拟当前 Landlord 参数和 `ResponseResult.data` 返回；资管多意图保存/指定稍后时间/自定义私聊正文仍使用 Skill 目标契约 Mock。后者通过不能证明现有后端支持。未验证 KERA、真实 Dubbo、真实发送回执、真实定时唤醒或工单关闭。
+
+本次同一个模型编写场景并执行，属于本地自测，不是独立模型评测。4 个时序用例失败被保留，报告中说明原因；没有通过改写 Skill 或放松断言消除失败。
+
+旧的 `01`～`06` 数据集、`test/runner.ts`、旧报告与旧 `trajectories/` 保留作历史资料；它们包含旧起草工具和旧调度约定。`pnpm test` 目前仍调用这个历史手写流程，不能用于本次 Skill 行为结论。

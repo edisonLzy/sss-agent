@@ -1,0 +1,2720 @@
+{
+  "description": "由当前 Codex 加载 Skill 后逐步决策；fixture/expected 仅用于布置数据与结果校验，不包含执行工作流。所有数据为合成数据。",
+  "clock": "2026-10-28T10:00:00+08:00",
+  "cases": [
+    {
+      "id": "PARAM_orderId",
+      "title": "缺少 orderId",
+      "fields": {
+        "orderId": null,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_contractCode",
+      "title": "缺少 contractCode",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": null,
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_contractId",
+      "title": "缺少 contractId",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": null,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_terminationType",
+      "title": "缺少 terminationType",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": null,
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_ID_ZERO",
+      "title": "非法 contractId",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 0,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_ID_NEGATIVE",
+      "title": "非法 contractId",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": -1,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "PARAM_ID_CODE",
+      "title": "非法 contractId",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": "MOCK-TG-001",
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": null,
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "INTENT_RENEW",
+      "title": "业主意向 RENEW",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "intention": {
+          "intention": "RENEW"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "INTENT_PENDING",
+      "title": "业主意向 PENDING",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "intention": {
+          "intention": "PENDING"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "INTENT_UNKNOWN",
+      "title": "业主意向 UNKNOWN",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "intention": {
+          "intention": "UNKNOWN"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "INTENT_ASSET_MANAGER_FOLLOW",
+      "title": "业主意向 ASSET_MANAGER_FOLLOW",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "intention": {
+          "intention": "ASSET_MANAGER_FOLLOW"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TYPE_11",
+      "title": "托管中途解约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "托管中途解约",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TYPE_12",
+      "title": "首次招租中途解约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首次招租中途解约",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TYPE_13",
+      "title": "未识别类型",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "未识别类型",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_intention",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AGREEMENT_True",
+      "title": "已有有效解约协议",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "terminationAgreement": {
+          "hasValidAgreement": true,
+          "isSigned": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AGREEMENT_False",
+      "title": "已有有效解约协议",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "terminationAgreement": {
+          "hasValidAgreement": true,
+          "isSigned": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_EXTENSION",
+      "title": "有效首招延长期",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "firstRecruitExtension": {
+          "hasValidExtension": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_first_recruit_extension_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_RENEWAL",
+      "title": "有效续约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "renewalAgreement": {
+          "hasValidRenewal": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_renewal_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_TENANT",
+      "title": "有效租约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "tenantContract": {
+          "hasValidTenantContract": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_tenant_contract",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AGREEMENT_True",
+      "title": "已有有效解约协议",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "terminationAgreement": {
+          "hasValidAgreement": true,
+          "isSigned": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AGREEMENT_False",
+      "title": "已有有效解约协议",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "terminationAgreement": {
+          "hasValidAgreement": true,
+          "isSigned": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_RENEWAL",
+      "title": "有效续约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "renewalAgreement": {
+          "hasValidRenewal": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_renewal_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_TENANT",
+      "title": "有效租约",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "tenantContract": {
+          "hasValidTenantContract": true
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_tenant_contract",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_TENANT_UNFINISHED",
+      "title": "tenant交割未完成",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "tenantDelivery": {
+          "isDeliveryFinished": false,
+          "canProceedTermination": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      },
+      "nextTurns": [
+        {
+          "userMessage": "租务回复：租客交割和业主交割清单都完成了。",
+          "state": {
+            "tenantDelivery": {
+              "isDeliveryFinished": true,
+              "canProceedTermination": true
+            },
+            "ownerDelivery": {
+              "isDeliveryFinished": true,
+              "canProceedTermination": true
+            }
+          },
+          "expected": {
+            "command": null,
+            "lastTool": "trigger_auto_termination",
+            "draftCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "WT_TENANT_DAMAGE",
+      "title": "tenant存在物损",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "tenantDelivery": {
+          "hasDamage": true,
+          "damageDescList": [
+            "Mock：墙面损坏"
+          ],
+          "canProceedTermination": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_delivery_checklist",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_OWNER_UNFINISHED",
+      "title": "owner交割未完成",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "ownerDelivery": {
+          "isDeliveryFinished": false,
+          "canProceedTermination": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_OWNER_DAMAGE",
+      "title": "owner存在物损",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "ownerDelivery": {
+          "hasDamage": true,
+          "damageDescList": [
+            "Mock：墙面损坏"
+          ],
+          "canProceedTermination": false
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_owner_delivery_checklist",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_DRAFT_STATUS_1",
+      "title": "起草状态 1",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 1,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_STATUS_2",
+      "title": "起草状态 2",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 2,
+          "currentNode": 6
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_STATUS_3",
+      "title": "起草状态 3",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 3,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_STATUS_4",
+      "title": "起草状态 4",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 4,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_ACCEPTED",
+      "title": "已受理但无协议ID",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "terminationContractId": null
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_UNKNOWN_STATUS",
+      "title": "起草非法响应 UNKNOWN_STATUS",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": {
+                "autoApplyId": 700001,
+                "applyStatus": 9,
+                "currentNode": 2
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_NO_ID",
+      "title": "起草非法响应 NO_ID",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": {
+                "autoApplyId": null,
+                "applyStatus": 1,
+                "currentNode": 2
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_EMPTY",
+      "title": "起草非法响应 EMPTY",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_ERROR_1007",
+      "title": "起草异常 1007",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "1007",
+              "errmsg": "待账单支付成功后再发起解约",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_ERROR_1004",
+      "title": "起草异常 1004",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：合同请求超时，结果待核实",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_DRAFT_ERROR_501",
+      "title": "起草异常 501",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "501",
+              "errmsg": "Mock：合同接口未实现",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_BACKDATE_MISSING",
+      "title": "还房日 MISSING",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": null,
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_BACKDATE_FORMAT",
+      "title": "还房日 FORMAT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "20261101",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_AGREE",
+      "title": "资管回复 AGREE",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "发吧，可以起草。",
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "FR_AM_DECLINE",
+      "title": "资管回复 DECLINE",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "先别发。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_DECLINE_REASON",
+      "title": "资管回复 DECLINE_REASON",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "先别发，账单还没结清。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_FOLLOW",
+      "title": "资管回复 FOLLOW",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "我自己跟进，后面你别管了。",
+      "expected": {
+        "command": "end",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_LATER_TIME",
+      "title": "资管回复 LATER_TIME",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "请在2026年10月29日下午3点（北京时间）再联系我。",
+      "expected": {
+        "command": "schedule",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_LATER_UNKNOWN",
+      "title": "资管回复 LATER_UNKNOWN",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "过几天再说吧。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      },
+      "nextTurns": [
+        {
+          "userMessage": "2026年10月29日下午3点，北京时间再联系我。",
+          "expected": {
+            "command": "schedule",
+            "lastTool": "save_asset_manager_authorization",
+            "draftCalls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "FR_AM_UNCLEAR",
+      "title": "资管回复 UNCLEAR",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "我看看那个单子吧。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      },
+      "nextTurns": [
+        {
+          "userMessage": "我是说可以起草，发吧。",
+          "expected": {
+            "command": null,
+            "lastTool": "trigger_auto_termination",
+            "draftCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "FR_AM_INIT",
+      "title": "资管联系 INIT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 0,
+          "lastContactAt": null
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_REMIND1",
+      "title": "资管联系 REMIND1",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_REMIND2",
+      "title": "资管联系 REMIND2",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 2,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_REMIND3",
+      "title": "资管联系 REMIND3",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 3,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AM_EXHAUSTED",
+      "title": "资管联系 EXHAUSTED",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 4,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_DRAFT_STATUS_1",
+      "title": "起草状态 1",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 1,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_STATUS_2",
+      "title": "起草状态 2",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 2,
+          "currentNode": 6
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_STATUS_3",
+      "title": "起草状态 3",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 3,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_STATUS_4",
+      "title": "起草状态 4",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "applyStatus": 4,
+          "currentNode": 2
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_ACCEPTED",
+      "title": "已受理但无协议ID",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "autoTermination": {
+          "terminationContractId": null
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_UNKNOWN_STATUS",
+      "title": "起草非法响应 UNKNOWN_STATUS",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": {
+                "autoApplyId": 700001,
+                "applyStatus": 9,
+                "currentNode": 2
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_NO_ID",
+      "title": "起草非法响应 NO_ID",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": {
+                "autoApplyId": null,
+                "applyStatus": 1,
+                "currentNode": 2
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_EMPTY",
+      "title": "起草非法响应 EMPTY",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "0",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_ERROR_1007",
+      "title": "起草异常 1007",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "1007",
+              "errmsg": "待账单支付成功后再发起解约",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_ERROR_1004",
+      "title": "起草异常 1004",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：合同请求超时，结果待核实",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_DRAFT_ERROR_501",
+      "title": "起草异常 501",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "trigger_auto_termination": [
+            {
+              "errno": "501",
+              "errmsg": "Mock：合同接口未实现",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_BACKDATE_MISSING",
+      "title": "还房日 MISSING",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": null,
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_BACKDATE_FORMAT",
+      "title": "还房日 FORMAT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "20261101",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {},
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_AGREE",
+      "title": "资管回复 AGREE",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "发吧，可以起草。",
+      "expected": {
+        "command": null,
+        "lastTool": "trigger_auto_termination",
+        "draftCalls": 1
+      }
+    },
+    {
+      "id": "WT_AM_DECLINE",
+      "title": "资管回复 DECLINE",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "先别发。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_DECLINE_REASON",
+      "title": "资管回复 DECLINE_REASON",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "先别发，账单还没结清。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_FOLLOW",
+      "title": "资管回复 FOLLOW",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "我自己跟进，后面你别管了。",
+      "expected": {
+        "command": "end",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_LATER_TIME",
+      "title": "资管回复 LATER_TIME",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "请在2026年10月29日下午3点（北京时间）再联系我。",
+      "expected": {
+        "command": "schedule",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_LATER_UNKNOWN",
+      "title": "资管回复 LATER_UNKNOWN",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "过几天再说吧。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_UNCLEAR",
+      "title": "资管回复 UNCLEAR",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": ""
+        }
+      },
+      "userMessage": "我看看那个单子吧。",
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_INIT",
+      "title": "资管联系 INIT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 0,
+          "lastContactAt": null
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_REMIND1",
+      "title": "资管联系 REMIND1",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_REMIND2",
+      "title": "资管联系 REMIND2",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 2,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_REMIND3",
+      "title": "资管联系 REMIND3",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 3,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AM_EXHAUSTED",
+      "title": "资管联系 EXHAUSTED",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 4,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "end",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_READ_TIMEOUT",
+      "title": "协议查询 READ_TIMEOUT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "query_owner_termination_agreement": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：查询超时",
+              "data": null
+            },
+            {
+              "errno": "1004",
+              "errmsg": "Mock：查询超时",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_AGREEMENT_EMPTY",
+      "title": "协议查询 AGREEMENT_EMPTY",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "query_owner_termination_agreement": [
+            {
+              "errno": "0",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_CONTACT_ACCEPTED",
+      "title": "私聊仅受理，等待回执",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "contactDelivery": {
+          "status": "ACCEPTED"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_CONTACT_FAILED",
+      "title": "私聊写失败不重试",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "contactDelivery": {
+          "status": "FAILED"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "FR_SAVE_FAILED",
+      "title": "意图保存写失败不继续起草",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN"
+        },
+        "toolResponses": {
+          "save_asset_manager_authorization": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：保存超时",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": "可以，发吧。",
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_READ_TIMEOUT",
+      "title": "协议查询 READ_TIMEOUT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "query_owner_termination_agreement": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：查询超时",
+              "data": null
+            },
+            {
+              "errno": "1004",
+              "errmsg": "Mock：查询超时",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_AGREEMENT_EMPTY",
+      "title": "协议查询 AGREEMENT_EMPTY",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "toolResponses": {
+          "query_owner_termination_agreement": [
+            {
+              "errno": "0",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_owner_termination_agreement",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_CONTACT_ACCEPTED",
+      "title": "私聊仅受理，等待回执",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "contactDelivery": {
+          "status": "ACCEPTED"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": null,
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_CONTACT_FAILED",
+      "title": "私聊写失败不重试",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        },
+        "contactDelivery": {
+          "status": "FAILED"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "contact_zuwu_and_asset_manager",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "WT_SAVE_FAILED",
+      "title": "意图保存写失败不继续起草",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "委托到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN"
+        },
+        "toolResponses": {
+          "save_asset_manager_authorization": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：保存超时",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": "可以，发吧。",
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "save_asset_manager_authorization",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TIME_NULL_NOT_EXHAUSTED",
+      "title": "时间响应 NULL_NOT_EXHAUSTED",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        },
+        "toolResponses": {
+          "query_asset_manager_next_contact_time": [
+            {
+              "errno": "0",
+              "data": {
+                "remindCount": 0,
+                "nextContactTime": null
+              }
+            },
+            {
+              "errno": "0",
+              "data": {
+                "remindCount": 0,
+                "nextContactTime": null
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TIME_MISSING_COUNT",
+      "title": "时间响应 MISSING_COUNT",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        },
+        "toolResponses": {
+          "query_asset_manager_next_contact_time": [
+            {
+              "errno": "0",
+              "data": {
+                "nextContactTime": null
+              }
+            },
+            {
+              "errno": "0",
+              "data": {
+                "nextContactTime": null
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TIME_PAST",
+      "title": "时间响应 PAST",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        },
+        "toolResponses": {
+          "query_asset_manager_next_contact_time": [
+            {
+              "errno": "0",
+              "data": {
+                "remindCount": 1,
+                "nextContactTime": "2026-10-27T10:00:00+08:00"
+              }
+            },
+            {
+              "errno": "0",
+              "data": {
+                "remindCount": 1,
+                "nextContactTime": "2026-10-27T10:00:00+08:00"
+              }
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TIME_ERROR",
+      "title": "时间响应 ERROR",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": 500001,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "WAITING_REPLY",
+          "authorization": "UNKNOWN"
+        },
+        "assetContact": {
+          "count": 1,
+          "lastContactAt": "2026-10-28T08:00:00+08:00"
+        },
+        "toolResponses": {
+          "query_asset_manager_next_contact_time": [
+            {
+              "errno": "1004",
+              "errmsg": "Mock：推进流程尚未启用",
+              "data": null
+            },
+            {
+              "errno": "1004",
+              "errmsg": "Mock：推进流程尚未启用",
+              "data": null
+            }
+          ]
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "transfer_to_human",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      }
+    },
+    {
+      "id": "TIME_NO_EXECUTION",
+      "title": "运行时无executionId，从授权查询回查真实记录ID（不能用orderId代替）",
+      "fields": {
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "contractId": 600001,
+        "terminationType": "首招到期",
+        "backDate": "2026-11-01",
+        "executionId": null,
+        "sessionId": "mock-session",
+        "requestId": "mock-request"
+      },
+      "scenario": "first_recruit_success",
+      "state": {
+        "assetManagerAuth": {
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN"
+        }
+      },
+      "userMessage": null,
+      "expected": {
+        "command": "schedule",
+        "lastTool": "query_asset_manager_next_contact_time",
+        "draftCalls": 0
+      },
+      "fixtureCorrection": "首轮旧Mock错误地把orderId返回为executionId；修正Mock后重测，接口返回真实ID=123，可引用响应值且不修改fields。旧尝试保存在attempts/。"
+    }
+  ]
+}

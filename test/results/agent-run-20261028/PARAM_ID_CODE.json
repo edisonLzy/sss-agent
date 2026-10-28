@@ -1,0 +1,32 @@
+{
+  "id": "PARAM_ID_CODE",
+  "title": "非法 contractId",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": "MOCK-TG-001",
+    "terminationType": "首招到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {},
+  "userMessage": null,
+  "expected": {
+    "command": "transfer_to_human",
+    "lastTool": null,
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [],
+  "output": {
+    "command": "transfer_to_human",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "前置校验失败：contractId 非法（需为大于0的Long，实际为合同编号字符串），转人工服务管家核验"
+  },
+  "errors": [],
+  "passed": true
+}

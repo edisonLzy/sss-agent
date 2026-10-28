@@ -1,0 +1,246 @@
+{
+  "id": "WT_CONTACT_ACCEPTED",
+  "title": "私聊仅受理，等待回执",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "委托到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {
+    "assetManagerAuth": {
+      "assetState": "NOT_CONTACTED",
+      "authorization": "UNKNOWN"
+    },
+    "contactDelivery": {
+      "status": "ACCEPTED"
+    }
+  },
+  "userMessage": null,
+  "expected": {
+    "command": null,
+    "lastTool": "contact_zuwu_and_asset_manager",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:08.883779+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_termination_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:08.952977+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_renewal_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.023360+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_tenant_contract",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.087805+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_tenant_delivery_checklist",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasDeliveryOrder": true,
+          "isDeliveryFinished": true,
+          "deliveryStatusDesc": "已完成",
+          "deliveryCode": "JG_DEFAULT_001",
+          "hasDamage": false,
+          "damageDescList": [],
+          "tenantContractCode": "CZ_DEFAULT_001",
+          "canProceedTermination": true
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.149630+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_delivery_checklist",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasDeliveryOrder": true,
+          "isDeliveryFinished": true,
+          "deliveryStatusDesc": "已完成",
+          "deliveryCode": "WYJG_DEFAULT_001",
+          "hasDamage": false,
+          "damageDescList": [],
+          "canProceedTermination": true,
+          "zuwuManagerName": "张三",
+          "zuwuManagerPhone": "13800138000"
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.220238+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_asset_manager_authorization",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "500001",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "NOT_CONTACTED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "资管已同意起草",
+          "authorizationStatus": "AGREE",
+          "nextContactAt": null,
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.297592+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "contact_zuwu_and_asset_manager",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "target": "ASSET_MANAGER",
+        "contactReason": "咨询委托到期是否同意起草解约协议",
+        "content": "资管经理您好，该房屋委托到期，相关前置排查已通过，请问是否同意起草解约协议？审核通过后将按流程发送业主签约。",
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "taskId": "TASK_1793177889363",
+          "status": "ACCEPTED",
+          "statusDesc": "Mock：仅受理，等待发送回执",
+          "acceptedTargets": [
+            "ASSET_MANAGER"
+          ],
+          "contactedTargets": []
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:09.363987+00:00"
+    }
+  ],
+  "output": {
+    "command": null,
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "联系资管消息仅受理，尚无成功发送回执，继续等待发送结果，不视为已送达"
+  },
+  "errors": [],
+  "passed": true
+}

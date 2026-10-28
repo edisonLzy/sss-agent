@@ -1,0 +1,101 @@
+{
+  "id": "WT_READ_TIMEOUT",
+  "title": "协议查询 READ_TIMEOUT",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "委托到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {
+    "toolResponses": {
+      "query_owner_termination_agreement": [
+        {
+          "errno": "1004",
+          "errmsg": "Mock：查询超时",
+          "data": null
+        },
+        {
+          "errno": "1004",
+          "errmsg": "Mock：查询超时",
+          "data": null
+        }
+      ]
+    }
+  },
+  "userMessage": null,
+  "expected": {
+    "command": "transfer_to_human",
+    "lastTool": "query_owner_termination_agreement",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:58:07.795994+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_termination_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "1004",
+        "errmsg": "Mock：查询超时",
+        "data": null
+      },
+      "recordedAt": "2026-10-28T08:58:07.856785+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_termination_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "1004",
+        "errmsg": "Mock：查询超时",
+        "data": null
+      },
+      "recordedAt": "2026-10-28T08:58:07.915809+00:00"
+    }
+  ],
+  "output": {
+    "command": "transfer_to_human",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "查询业主解约协议连续两次超时（errno=1004：Mock：查询超时），已重试1次仍失败，判定系统不可用，转人工"
+  },
+  "errors": [],
+  "passed": true
+}

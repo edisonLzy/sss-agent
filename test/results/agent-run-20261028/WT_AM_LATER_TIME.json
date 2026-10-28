@@ -1,0 +1,240 @@
+{
+  "id": "WT_AM_LATER_TIME",
+  "title": "资管回复 LATER_TIME",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "委托到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {
+    "assetManagerAuth": {
+      "assetState": "REPLIED",
+      "authorization": "UNKNOWN",
+      "authorizationReason": ""
+    }
+  },
+  "userMessage": "请在2026年10月29日下午3点（北京时间）再联系我。",
+  "expected": {
+    "command": "schedule",
+    "lastTool": "save_asset_manager_authorization",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:55.817439+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_termination_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidAgreement": false,
+          "isSigned": false,
+          "agreementStatusDesc": "",
+          "agreementCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:55.885481+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_renewal_agreement",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidRenewal": false,
+          "isSigned": false,
+          "renewalStatusDesc": "",
+          "renewalContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:55.947278+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_tenant_contract",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasValidTenantContract": false,
+          "isSigned": false,
+          "tenantContractStatusDesc": "已解约",
+          "tenantContractCode": null
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:56.005374+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_tenant_delivery_checklist",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasDeliveryOrder": true,
+          "isDeliveryFinished": true,
+          "deliveryStatusDesc": "已完成",
+          "deliveryCode": "JG_DEFAULT_001",
+          "hasDamage": false,
+          "damageDescList": [],
+          "tenantContractCode": "CZ_DEFAULT_001",
+          "canProceedTermination": true
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:56.063874+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_owner_delivery_checklist",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "contractCode": "MOCK-TG-001",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "hasDeliveryOrder": true,
+          "isDeliveryFinished": true,
+          "deliveryStatusDesc": "已完成",
+          "deliveryCode": "WYJG_DEFAULT_001",
+          "hasDamage": false,
+          "damageDescList": [],
+          "canProceedTermination": true,
+          "zuwuManagerName": "张三",
+          "zuwuManagerPhone": "13800138000"
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:56.121622+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "query_asset_manager_authorization",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001,
+        "contractCode": "MOCK-TG-001",
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "executionId": "500001",
+          "version": 1,
+          "status": "ACTIVE",
+          "phase": "PREREQUISITES",
+          "ownerMode": "AUTO",
+          "assetState": "REPLIED",
+          "authorization": "UNKNOWN",
+          "authorizationReason": "",
+          "authorizationStatus": "AGREE",
+          "nextContactAt": null,
+          "contractCheck": "PASS",
+          "deliveryState": "PASS",
+          "damageState": "NONE",
+          "prerequisiteReason": "",
+          "contractStage": "WAIT_DRAFT",
+          "notificationState": "NONE",
+          "endReason": ""
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:56.183990+00:00"
+    },
+    {
+      "kind": "Call",
+      "name": "save_asset_manager_authorization",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "authorization": "CONTACT_LATER",
+        "reason": "资管要求稍后联系：请在2026年10月29日下午3点（北京时间）再联系我。",
+        "nextContactAt": "2026-10-29T15:00:00+08:00",
+        "executionId": 500001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "success": true,
+          "executionId": "500001",
+          "authorization": "CONTACT_LATER",
+          "reason": "资管要求稍后联系：请在2026年10月29日下午3点（北京时间）再联系我。",
+          "nextContactAt": "2026-10-29T15:00:00+08:00"
+        }
+      },
+      "recordedAt": "2026-10-28T08:55:56.251843+00:00"
+    }
+  ],
+  "output": {
+    "command": "schedule",
+    "nextScheduleAt": "2026-10-29T15:00:00+08:00",
+    "finalAnswer": null,
+    "reason": "资管要求稍后联系，按约定时间再次确认"
+  },
+  "errors": [],
+  "passed": true
+}

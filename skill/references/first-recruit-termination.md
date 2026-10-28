@@ -13,7 +13,7 @@
 
 ## 依赖工具清单
 
-本子流程依赖以下 8 个核心工具。字段与接入边界见 [resources/tool-contracts.md](../resources/tool-contracts.md)；起草工具直接沿用合同侧名称和 DTO，待 Landlord 实现注册；入口查询沿用既有工具，授权查询的时间字段及新增意图保存工具待工程补齐。
+本子流程依赖以下 9 个核心工具，字段、接入边界与待接入说明见 [resources/tool-contracts.md](../resources/tool-contracts.md)。
 
 | 序号 | 工具标识 (Tool Name) | 工具类型 | 用途说明 |
 | :---: | :--- | :---: | :--- |
@@ -21,10 +21,11 @@
 | 2 | [`query_first_recruit_extension_agreement`](../resources/tool-contracts.md#query_first_recruit_extension_agreement) | 读查询 | 查询原合同是否存在首招延长期变更确认/协议（延长期排查） |
 | 3 | [`query_owner_renewal_agreement`](../resources/tool-contracts.md#query_owner_renewal_agreement) | 读查询 | 查询原合同是否已发起续约合同（续约互斥排查） |
 | 4 | [`query_tenant_contract`](../resources/tool-contracts.md#query_tenant_contract) | 读查询 | 查询当前房源是否存在有效租客租赁合同（在租互斥排查） |
-| 5 | [`query_asset_manager_authorization`](../resources/tool-contracts.md#query_asset_manager_authorization) | 读查询 | 查询联系状态、资管授权意图及工具计算的下次联系时间 `nextContactAt` |
+| 5 | [`query_asset_manager_authorization`](../resources/tool-contracts.md#query_asset_manager_authorization) | 读查询 | 查询联系状态与资管授权意图 |
 | 6 | [`contact_zuwu_and_asset_manager`](../resources/tool-contracts.md#contact_zuwu_and_asset_manager) | 写操作 | 私聊资管经理（咨询授权/2h/4h/t+1 追问及拒绝追问原因） |
-| 7 | [`triggerAutoTermination`](../resources/tool-contracts.md#triggerautotermination) | 写操作 | 向合同系统发起起草首招到期业主解约协议请求 |
+| 7 | [`trigger_auto_termination`](../resources/tool-contracts.md#trigger_auto_termination) | 写操作 | 向合同系统发起起草首招到期业主解约协议请求 |
 | 8 | `save_asset_manager_authorization`（暂定，待接入） | 写操作 | 保存识别到的资管意图、原因及可空的下次联系时间 |
+| 9 | [`query_asset_manager_next_contact_time`](../resources/tool-contracts.md#query_asset_manager_next_contact_time) | 读查询 | 根据成功联系事实查询追问次数和下次联系时间 |
 
 ---
 
@@ -56,8 +57,7 @@ flowchart TD
     Step3 -->|"未回复且工具确认追问耗尽"| AMTimeout["Return(command='end')<br/>定义为资管未回复，结束工单"]
     
     Step4 -->|"起草成功"| DraftSuccess["Return(command=null, nextScheduleAt=null)<br/>通知办理进展，本轮结束"]
-    Step4 -->|"申请失败/明确业务校验不通过"| DraftBlocked["Return(command='end')<br/>记录合同侧原因，结束本次推进"]
-    Step4 -->|"技术异常或结果不确定"| DraftError["Return(command='transfer_to_human')<br/>停止重复起草，转人工核验"]
+    Step4 -->|"起草失败（业务校验不通过/技术异常/结果不确定等）"| DraftFailed["Return(command='end')<br/>记录失败原因，结束本次推进"]
 ```
 
 ---
@@ -167,12 +167,12 @@ Call({
 ```
 
 - `assetState` 表示联系进度，`authorization` 表示授权意图。未联系使用 `NOT_CONTACTED`，未回复使用 `WAITING_REPLY`；`UNKNOWN` 只表示意图未确定。
-- 查询工具同时返回计算后的 `nextContactAt`，不新增独立时间查询工具。追问次数及联系时间由工程和工具维护，Skill 不自行计数、计算时间梯度或填写固定日期。
+- 未回复时的下次追问时间由独立工具 `query_asset_manager_next_contact_time` 返回，先检查 `errno="0"`，再读取 `data.remindCount` 和 `data.nextContactTime`。追问次数及联系时间由工程和工具维护，Skill 不自行计算。该接口基于成功联系记录，不提供资管指定的稍后联系时间；下文意图保存与约期分支仍保留其原有待接入边界。
 - 识别到有效意图时，先调用 `save_asset_manager_authorization` 保存 `authorization`、`reason` 和 `nextContactAt`，成功后再分发；未明确联系时间时保存 `null`。已保存且未变化的意图不必重复写入。保存工具的具体契约待工程接入，不能模拟保存成功。
 - 本步骤只有 `command="end"` 才结束工单并销毁会话，其余 command 均挂起。暂不同意、等待澄清或等待联系时间时，按本节返回，不套用旧的“非同意统一转人工”规则。
 - 本步骤的私聊通过 `contact_zuwu_and_asset_manager` 发送，`target="ASSET_MANAGER"`，`finalAnswer` 均为 `null`；同意后的业主群通知由步骤 4 输出。
 - 以下按“保存意图 → 按需私聊 → Return”的顺序列出调用。通用上下文沿用查询工具；新增保存工具的输入为目标契约，待工程对齐。前置工具调用成功后才执行后续步骤和对应 `Return`，失败按工具异常处理，不能仅在 `reason` 中声称已保存或已追问。
-- 下列 `saveResult`、`queryResult` 表示对应工具成功返回的业务数据。
+- 下列 `saveResult` 表示保存意图工具的目标业务数据（契约待接入）；`queryResult` 表示时间查询工具的 HTTP 响应，业务字段位于 `data`。
 
 **决策分支**：
 
@@ -340,7 +340,7 @@ Call({
    ```
 
 6. **未联系或资管未回复**：
-   - **`NOT_CONTACTED`**：调用联系工具发送初次咨询，再通过授权查询工具取得下次联系时间，返回 `schedule`，`reason="等待资管回复"`。
+   - **`NOT_CONTACTED`**：调用联系工具发送初次咨询，再通过独立时间查询工具取得下次联系时间，返回 `schedule`，`reason="等待资管回复"`。
      ```text
      Call({
        name: "contact_zuwu_and_asset_manager",
@@ -373,28 +373,28 @@ Call({
      })
      ```
 
-   初次咨询或未回复追问的联系工具调用成功后，都重新查询下次联系时间；返回有效未来时间时执行下面的 `schedule`，明确追问耗尽时使用下方的 `end` 分支：
+   初次咨询或未回复追问已有成功发送记录后，重新查询下次联系时间；仅受理但尚无成功发送记录时等待发送回执，不以时间查询失败推断追问耗尽；返回有效未来时间时执行下面的 `schedule`，明确追问耗尽时使用下方的 `end` 分支：
 
      ```text
      queryResult = Call({
-       name: "query_asset_manager_authorization",
+       name: "query_asset_manager_next_contact_time",
        payload: {
          executionId: {{fields.executionId}},
-         orderId: {{fields.orderId}},
-         contractCode: {{fields.contractCode}},
          sessionId: {{fields.sessionId}},
          requestId: {{fields.requestId}}
        }
      })
+     // 仅 errno="0"、data 完整且 nextContactTime 为有效未来时间时执行下方 schedule。
+     // executionId 必须是真实推进记录 ID，不能用 orderId 替代。
      Return({
        command: "schedule",
-       nextScheduleAt: queryResult.nextContactAt,
+       nextScheduleAt: queryResult.data.nextContactTime,
        finalAnswer: null,
        reason: "等待资管回复"
      })
      ```
 
-   - **`WAITING_REPLY` 且查询工具明确确认三次追问耗尽，`nextContactAt=null`**：定义为“资管未回复”，结束工单：
+   - **`WAITING_REPLY` 且时间查询成功返回 `data.remindCount>=3`、`data.nextContactTime=null`**：定义为“资管未回复”，结束工单：
      ```json
      Return({
        "command": "end",
@@ -411,11 +411,11 @@ Call({
 
 ### 步骤 4：发起起草业主解约协议（写操作）
 
-拿到资管确认结论后，直接调用合同侧 `triggerAutoTermination`。先确认上游已按合同 DTO 提供 `{{fields.backDate}}`；缺失时不调用写接口，返回 `transfer_to_human`。首招到期使用合同侧 `terminationType: 7`，还房日按统一业务时区当天零点的 `Date` 原样透传。
+拿到资管确认结论后，通过 Landlord Tool `trigger_auto_termination` 发起起草。首招到期使用合同侧 `terminationType: 7`，还房日以 `yyyy-MM-dd` 字符串传入，由 Landlord 转为 `Asia/Shanghai` 当天零点的 `Date`。
 
 ```text
 draftResult = Call({
-  name: "triggerAutoTermination",
+  name: "trigger_auto_termination",
   payload: {
     contractId: {{fields.contractId}},
     terminationType: 7,
@@ -424,7 +424,7 @@ draftResult = Call({
 })
 ```
 
-**返回处理**（直接读取原生响应，不使用 `.data` 包装）：
+**返回处理**：先检查 `draftResult.errno`；仅字符串 `"0"` 表示工具调用成功，再从 `draftResult.data` 读取 `autoApplyId/terminationContractId/applyStatus/currentNode`。非零码按真实错误处理，空响应或缺少必要字段不得视为成功：
 
 1. **有效 `autoApplyId` 且 `applyStatus=1/2`**：返回 `command: null`、`nextScheduleAt: null` 结束本轮，不再查询合同结果，后续办理交工程侧。`applyStatus=1` 且已有 `terminationContractId` 时，可通过允许的群消息出口播报：
    ```json
@@ -437,9 +437,7 @@ draftResult = Call({
    ```
    尚无协议 ID 时只能说“申请已受理”；`applyStatus=2` 仅表示发送业主操作完成，不作已签署判定。不需要或不允许群发时 `finalAnswer=null`。
 
-2. **合同明确业务校验不通过，或返回 `applyStatus=3/4`**：按 [起草返回处理](../resources/tool-contracts.md#起草返回处理) 输出 `end`、`nextScheduleAt=null`、`finalAnswer=null`，记录实际错误或返回的申请 ID、状态及节点。本期不追加失败详情查询；原生四字段响应没有返回具体原因时，不编造“前置校验失败”的原因。
-
-3. **技术异常、超时或结果不确定**：停止重复触发，输出 `transfer_to_human` 并记录实际报错，不将未知结果当作业务校验失败。工程侧核验不属于本期 Skill。
+2. **起草失败（业务校验不通过、`applyStatus=3/4`，或技术异常/超时/结果不确定等其他失败情形）**：统一输出 `end`、`nextScheduleAt=null`、`finalAnswer=null`，记录接口实际返回的错误信息、申请 ID、状态、节点或报错内容，结束本次发起；`end` 不代表合同解约成功。写操作不自动重试，不盲目重复触发起草。
 
 ---
 
@@ -457,8 +455,7 @@ draftResult = Call({
 |  | 稍后联系，时间明确 | `schedule` | 工具返回的约定时间 | `null` | 保存意图及联系时间，挂起等待 |
 |  | 稍后联系，时间未明确 | `null` | `null` | `null` | 保存意图，追问具体联系时间 |
 |  | 无法识别有效意图 | `null` | `null` | `null` | 私聊澄清，等待回复 |
-|  | 未联系 / 未回复且未达追问上限 | `schedule` | 授权查询工具返回时间 | `null` | 联系资管，等待回复；次数和时间由工具维护 |
+|  | 未联系 / 未回复且未达追问上限 | `schedule` | 独立时间查询工具返回时间 | `null` | 联系资管，等待回复；次数和时间由工具维护 |
 |  | 未回复且工具确认三次追问耗尽 | `end` | `null` | `null` | 定义为“资管未回复”，结束工单 |
 | **4. 协议起草** | `applyStatus=1/2`、有效申请 ID | `null` | `null` | 按实际状态播报办理进展；不需群发时 `null` | 本轮结束，后续办理交工程侧 |
-|  | 合同明确业务校验不通过或 `applyStatus=3/4` | `end` | `null` | `null` | 记录实际返回信息，结束本次发起 |
-|  | 技术异常或结果不确定 | `transfer_to_human` | `null` | `@业主 转人工...` | 不盲目重试，转人工核验 |
+|  | 起草失败（业务校验不通过/`applyStatus=3/4`/技术异常/结果不确定等） | `end` | `null` | `null` | 记录实际失败原因，结束本次发起 |

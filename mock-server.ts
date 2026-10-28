@@ -1,7 +1,10 @@
 /**
  * 业主自助解约（owner-self-termination）Skill Mock Server
  *
- * 对齐后端实现：
+ * 本地合成 Mock，不调用真实系统。
+ * trigger_auto_termination 和 query_asset_manager_next_contact_time 按当前后端契约模拟；
+ * 资管多意图保存、约期和自定义联系正文按 Skill 目标契约模拟，不表示后端已经支持。
+ * 后端参考：
  * 1. huiju-private-domain-landlord (OwnerTerminationAgentToolController / OwnerTerminationAgentToolService)
  * 2. agent-router (AgentLoopOutput / BusinessAgent)
  *
@@ -56,6 +59,17 @@ export function errorResult(code: string | ToolErrorType, message: string): Resp
 // =============================================================================
 
 export interface MockState {
+  // 本地测试时钟及响应注入；不向真实服务发请求。
+  clock: { now: string };
+  toolResponses: Record<string, ResponseResult[]>;
+  contactDelivery: { status: 'SUCCESS' | 'ACCEPTED' | 'FAILED' };
+  assetContact: { enabled: boolean; count: number; lastContactAt: string | null };
+  autoTermination: {
+    autoApplyId: number | null;
+    terminationContractId: number | null;
+    applyStatus: number;
+    currentNode: number;
+  };
   // 意向
   intention: {
     intention: 'TERMINATE' | 'RENEW' | 'PENDING' | 'ASSET_MANAGER_FOLLOW' | 'UNKNOWN';
@@ -550,6 +564,11 @@ export const SCENARIO_PRESETS: Record<string, { description: string; stateBuilde
 /** 默认基础状态（各项前置无冲突，业主意向明确解约） */
 export function getDefaultState(): MockState {
   return {
+    clock: { now: '2026-10-28T10:00:00+08:00' },
+    toolResponses: {},
+    contactDelivery: { status: 'SUCCESS' },
+    assetContact: { enabled: true, count: 0, lastContactAt: null },
+    autoTermination: { autoApplyId: 700001, terminationContractId: 800001, applyStatus: 1, currentNode: 2 },
     intention: {
       intention: 'TERMINATE',
       intentionDesc: '解约',
@@ -723,7 +742,8 @@ export class ToolHandlers {
 
   /** 8. 查询资管同意发起授权 */
   static queryAssetManagerAuthorization(payload: any): ResponseResult {
-    const executionId = payload?.executionId ?? payload?.orderId;
+    // 按工单查询时，返回匹配记录的主键，不能把工单ID伪装为推进记录ID。
+    const executionId = payload?.executionId ?? (payload?.orderId ? currentState.assetManagerAuth.executionId : null);
     if (!executionId) {
       return errorResult(ToolErrorType.INVALID_ARGUMENT, '推进记录ID不能为空');
     }
@@ -773,6 +793,16 @@ export class ToolHandlers {
     const content = payload?.content || contactReason;
     const remindRound = payload?.remindRound;
 
+    if (currentState.contactDelivery.status === 'FAILED') {
+      return errorResult(ToolErrorType.BACKEND_FAILED, 'Mock：消息发送失败');
+    }
+    const delivered = currentState.contactDelivery.status === 'SUCCESS';
+    if (delivered && (target === 'ASSET_MANAGER' || target === 'ALL')) {
+      currentState.assetContact.count += 1;
+      currentState.assetContact.lastContactAt = currentState.clock.now;
+      currentState.assetManagerAuth.assetState = 'WAITING_REPLY';
+    }
+
     // 记录到联系历史
     currentState.contactHistory.push({
       target,
@@ -785,11 +815,51 @@ export class ToolHandlers {
     const taskId = `TASK_${Date.now()}`;
     return successResult({
       taskId,
-      status: 'ACCEPTED',
-      statusDesc: '已发送成功待回复',
+      status: currentState.contactDelivery.status,
+      statusDesc: delivered ? 'Mock：已成功发送，等待回复' : 'Mock：仅受理，等待发送回执',
       acceptedTargets: [target],
-      contactedTargets: [target],
+      contactedTargets: delivered ? [target] : [],
     });
+  }
+
+  /** 与 Landlord 当前参数及 ResponseResult.data 对齐。 */
+  static triggerAutoTermination(payload: any): ResponseResult {
+    if (!Number.isInteger(payload?.contractId) || payload.contractId <= 0) {
+      return errorResult(ToolErrorType.INVALID_ARGUMENT, 'contractId 必须大于 0');
+    }
+    if (![1, 7].includes(payload?.terminationType)) {
+      return errorResult(ToolErrorType.INVALID_ARGUMENT, 'terminationType 仅支持 1 或 7');
+    }
+    const date = payload?.backDate;
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)
+        || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+      return errorResult(ToolErrorType.INVALID_ARGUMENT, 'backDate 必须为 yyyy-MM-dd 格式的有效日期');
+    }
+    if (!currentState.draftAgreement.succeed) {
+      return errorResult(currentState.draftAgreement.errorType || ToolErrorType.BACKEND_FAILED,
+        currentState.draftAgreement.errorMessage || '合同侧起草失败，结果待核实');
+    }
+    return successResult(currentState.autoTermination);
+  }
+
+  static queryAssetManagerNextContactTime(payload: any): ResponseResult {
+    if (!Number.isInteger(payload?.executionId) || payload.executionId <= 0) {
+      return errorResult(ToolErrorType.INVALID_ARGUMENT, '推进记录 executionId 不能为空且必须大于 0');
+    }
+    const contact = currentState.assetContact;
+    if (!contact.enabled) return errorResult(ToolErrorType.BACKEND_FAILED, '推进流程尚未启用');
+    if (contact.count < 1 || !contact.lastContactAt) {
+      return errorResult(ToolErrorType.BACKEND_FAILED, '尚无成功联系记录，无法计算下次跟进时间');
+    }
+    const remindCount = contact.count - 1;
+    let nextContactTime: string | null = null;
+    if (remindCount < 3) {
+      const local = new Date(Date.parse(contact.lastContactAt) + 8 * 3600000);
+      if (remindCount < 2) local.setUTCHours(local.getUTCHours() + (remindCount === 0 ? 2 : 4));
+      else { local.setUTCDate(local.getUTCDate() + 1); local.setUTCHours(10, 0, 0, 0); }
+      nextContactTime = local.toISOString().slice(0, 19) + '+08:00';
+    }
+    return successResult({ remindCount, nextContactTime });
   }
 
   /** 11. 起草业主解约协议 */
@@ -824,6 +894,10 @@ export class ToolHandlers {
 
 // 工具名称到 Handler 的映射表 (支持 snake_case 与 camelCase)
 const TOOL_NAME_TO_HANDLER: Record<string, (payload: any) => ResponseResult> = {
+  'trigger_auto_termination': ToolHandlers.triggerAutoTermination,
+  'triggerAutoTermination': ToolHandlers.triggerAutoTermination,
+  'query_asset_manager_next_contact_time': ToolHandlers.queryAssetManagerNextContactTime,
+  'queryAssetManagerNextContactTime': ToolHandlers.queryAssetManagerNextContactTime,
   // 1. query_owner_intention
   'query_owner_intention': ToolHandlers.queryOwnerIntention,
   'queryOwnerIntention': ToolHandlers.queryOwnerIntention,
@@ -875,7 +949,8 @@ function dispatchTool(toolName: string, payload: any): ResponseResult {
     return errorResult(ToolErrorType.NOT_IMPLEMENTED, `未实现的工具: ${toolName}`);
   }
 
-  const result = handler(payload || {});
+  const injected = currentState.toolResponses[toolName];
+  const result = injected?.length ? injected.shift()! : handler(payload || {});
 
   // 记入调用审计历史
   currentState.callHistory.push({
@@ -895,6 +970,43 @@ function dispatchTool(toolName: string, payload: any): ResponseResult {
 export function createMockApp() {
   const app = express();
   app.use(express.json());
+  // 每个评测用例独立保存事实和调用历史，避免多轮测试互相污染。
+  const sessions = new Map<string, MockState>();
+  const mergeState = (state: MockState, patch: Record<string, any>) => {
+    for (const [key, value] of Object.entries(patch)) {
+      if (!(key in state)) throw new Error(`未知状态字段: ${key}`);
+      (state as any)[key] = { ...(state as any)[key], ...value };
+    }
+  };
+  app.post('/mock/session/:id', (req, res) => {
+    const scenario = req.body.scenario || 'first_recruit_success';
+    if (!SCENARIO_PRESETS[scenario]) return res.status(400).json({ error: '未知场景' });
+    const state = SCENARIO_PRESETS[scenario].stateBuilder();
+    mergeState(state, req.body.state || {});
+    sessions.set(String(req.params.id), state);
+    res.json({ created: req.params.id });
+  });
+  app.patch('/mock/session/:id', (req, res) => {
+    const state = sessions.get(String(req.params.id));
+    if (!state) return res.sendStatus(404);
+    mergeState(state, req.body.state || {});
+    res.json({ updated: req.params.id });
+  });
+  app.get('/mock/session/:id', (req, res) => {
+    const state = sessions.get(String(req.params.id));
+    return state ? res.json(state) : res.sendStatus(404);
+  });
+  app.post('/mock/session/:id/call', (req, res) => {
+    const state = sessions.get(String(req.params.id));
+    if (!state) return res.sendStatus(404);
+    const previous = currentState;
+    try {
+      currentState = state;
+      res.json(dispatchTool(req.body.name, req.body.payload));
+    } finally {
+      currentState = previous;
+    }
+  });
 
   // 日志记录中间件
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -1024,7 +1136,7 @@ export function createMockApp() {
   // 真实后端路径：POST /secure/agentTool/ownerTermination/:action
   // ---------------------------------------------------------------------------
   app.post('/secure/agentTool/ownerTermination/:action', (req: Request, res: Response) => {
-    const action = req.params.action;
+    const action = String(req.params.action);
     console.log(`\x1b[36m[BACKEND ROUTE] ${action}\x1b[0m`, JSON.stringify(req.body));
     const result = dispatchTool(action, req.body);
     res.json(result);
@@ -1034,7 +1146,7 @@ export function createMockApp() {
   // 顶级工具直连：POST /:toolName (如 POST /query_owner_intention)
   // ---------------------------------------------------------------------------
   app.post('/:toolName', (req: Request, res: Response, next: NextFunction) => {
-    const toolName = req.params.toolName;
+    const toolName = String(req.params.toolName);
     if (TOOL_NAME_TO_HANDLER[toolName]) {
       console.log(`\x1b[36m[DIRECT TOOL] ${toolName}\x1b[0m`, JSON.stringify(req.body));
       const result = dispatchTool(toolName, req.body);
@@ -1074,9 +1186,11 @@ if (isDirectRun && !process.env.NODE_ENV?.includes('test')) {
        - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/queryOwnerIntention
        - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/queryOwnerTerminationAgreement
        - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/queryAssetManagerAuthorization
+       - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/queryAssetManagerNextContactTime
+       - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/triggerAutoTermination
        - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/draftOwnerTerminationAgreement
        - POST http://localhost:${PORT}/secure/agentTool/ownerTermination/contactZuwuAndAssetManager
-       - ... (共 11 个核心接口全覆盖)
+       - ... (包含旧起草兼容接口，共 13 个工具)
 
     3. 工具直连路由:
        - POST http://localhost:${PORT}/query_owner_intention

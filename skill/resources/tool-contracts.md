@@ -1,6 +1,6 @@
 # 业主续解自动化 Tool 契约
 
-本文件记录 Skill 使用的 Tool 名称、输入输出字段及语义规范。合同自动解约起草以[合同侧接入文档第八章](https://beike.feishu.cn/wiki/WbCRw07TziVLWIkbnJIcUnEcnFd)为准，起草工具直接沿用合同侧名称与原生 DTO，待 Landlord 实现注册，不表示已上线。其余工具沿用既有定义。字段名须严格原样使用，不得沿用与合同文档冲突的 Landlord 预留字段。
+本文件记录 Skill 使用的 Tool 名称、输入输出字段及语义规范。合同自动解约起草以[合同侧接入文档第八章](https://beike.feishu.cn/wiki/WbCRw07TziVLWIkbnJIcUnEcnFd)为准，起草通过 Landlord HTTP Tool `trigger_auto_termination` 调用合同侧 DTO，代码存在不表示已部署或注册到 KERA。其余工具沿用既有定义。字段名须严格原样使用，不得沿用与合同文档冲突的 Landlord 预留字段。
 
 ---
 
@@ -14,8 +14,9 @@
 7. [query_owner_delivery_checklist（查询业主解约交割清单及物损）](#query_owner_delivery_checklist)
 8. [query_owner_intention（查询业主续解意向）](#query_owner_intention)
 9. [query_asset_manager_authorization（查询资管同意发起授权）](#query_asset_manager_authorization)
-10. [triggerAutoTermination（发起自动解约起草）](#triggerautotermination)
+10. [trigger_auto_termination（发起自动解约起草）](#trigger_auto_termination)
 11. [contact_zuwu_and_asset_manager（联系租务和资管）](#contact_zuwu_and_asset_manager)
+12. [query_asset_manager_next_contact_time（查询下次联系时间）](#query_asset_manager_next_contact_time)
 
 ---
 
@@ -28,7 +29,7 @@
 
 ### 2. 既有工具响应外层结构 (ResponseResult)
 
-此包装适用于既有查询和联系工具；本次合同侧 `triggerAutoTermination` 直接使用原生响应。
+Landlord HTTP Tool 均使用此包装，包括 `trigger_auto_termination` 和 `query_asset_manager_next_contact_time`；仅当 `errno="0"` 时读取 `data`。合同 Dubbo 的原生响应位于起草 Tool 的 `data` 中。
 ```json
 {
   "errno": "0",
@@ -290,21 +291,23 @@
 
 ---
 
-## triggerAutoTermination
+## trigger_auto_termination
 
 直接使用合同侧 `ContractInTerminationAutoApplyFacade.triggerAutoTermination(InTerminationAutoApplyReq)`，返回 `InTerminationAutoApplyResp`。接口同步准备和起草，后续提交、审核、盖章、发送由合同侧异步推进。本期 Skill 到发起返回为止。
 
-名称与请求、响应直接按合同文档第八章，不引入 Draft 协议、工具别名或额外响应包装。以下接口待 Landlord 实现并注册。
+Tool 名称为 `trigger_auto_termination`，HTTP 路径为 `POST /secure/agentTool/ownerTermination/triggerAutoTermination`。Landlord 包装合同 Dubbo 调用：业务入参见下表，HTTP 成功响应的 `data` 为合同响应对象。沿用登录上下文，不在合同业务参数中加入操作人。部署、KERA 注册及合同侧可用性以环境验证为准。
 
-**输入参数（原生 DTO）**：
+**输入参数（Landlord HTTP Body）**：
 
-| 参数名 | Java 类型 | 必填 | 说明 |
+| 参数名 | 类型 | 必填 | 说明 |
 | :--- | :--- | :--- | :--- |
 | `contractId` | Long | 是 | 大于 0 的收房主合同主键，原样传 `{{fields.contractId}}` |
 | `terminationType` | Integer | 是 | `1`=合同到期（委托到期）；`7`=招租期届满招租失败（首招到期） |
-| `backDate` | java.util.Date | 是 | 上游按统一业务时区 `Asia/Shanghai` 当天零点提供，原样传 `{{fields.backDate}}`；模型不自行转日期或猜还房日 |
+| `backDate` | String | 是 | `yyyy-MM-dd` 还房日，Landlord 转为 `Asia/Shanghai` 当天零点的 java.util.Date；模型不猜还房日 |
 
-**返回参数（InTerminationAutoApplyResp）**：
+可选链路字段 `sessionId`、`requestId` 沿用 BaseToolRequest。`contractId` 必须大于 0，`terminationType` 仅支持 1/7，日期格式非法返回参数错误。
+
+**返回参数（HTTP 响应 data / InTerminationAutoApplyResp）**：
 
 | 字段名 | Java 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -315,11 +318,12 @@
 
 ### 起草返回处理
 
-- 有效 `autoApplyId` 且 `applyStatus=1/2`：返回 `command=null`、`nextScheduleAt=null`，本轮结束。`applyStatus=1` 且协议 ID 非空时可播报“协议已起草”，协议 ID 为空时只能播报“申请已受理”；本 Skill 不做后续结果查询、签约通知或催签。
-- 合同明确抛出前置业务校验不通过，或原生响应 `applyStatus=3/4`：返回 `end`、`nextScheduleAt=null`、`finalAnswer=null`，结束本次发起。记录接口实际返回的错误或申请 ID、状态、节点；四字段响应不含失败原因时不自行补造。`end` 不代表合同解约成功。
-- 技术异常、超时、空响应或非法快照：不盲目重发，不当作明确业务失败；输出 `transfer_to_human`，记录实际报错。本期不为查原因再调用查询接口。
+先检查 HTTP 响应 `errno`；成功时以下业务字段均从 `data` 读取。非零码记录 `errmsg`，不得按申请成功处理；明确业务阻断与技术异常仍按以下规则区分。写操作不自动重试。
 
-原生接口直接返回响应对象；无法受理的参数、鉴权、主合同不存在或参数冲突等请求抛业务异常，不伪造申请 ID。禁止添加原生 DTO 没有的 `type/reason`、操作人、费用、银行账户或外部请求唯一标识；工程侧自行保存运行追踪。
+- 有效 `autoApplyId` 且 `applyStatus=1/2`：返回 `command=null`、`nextScheduleAt=null`，本轮结束。`applyStatus=1` 且协议 ID 非空时可播报“协议已起草”，协议 ID 为空时只能播报“申请已受理”；本 Skill 不做后续结果查询、签约通知或催签。
+- 起草失败（合同明确抛出前置业务校验不通过、原生响应 `applyStatus=3/4`，或技术异常、超时、空响应、非法快照等其他失败情形）：统一返回 `end`、`nextScheduleAt=null`、`finalAnswer=null`，结束本次发起。记录接口实际返回的错误或申请 ID、状态、节点，或实际报错内容；四字段响应不含失败原因时不自行补造。`end` 不代表合同解约成功，写操作不自动重试，不盲目重复触发起草。
+
+合同 Dubbo 原生接口直接返回响应对象，Landlord HTTP Tool 使用 ResponseResult 包装；无法受理的参数、鉴权、主合同不存在或参数冲突等请求抛业务异常，不伪造申请 ID。禁止添加原生 DTO 没有的 `type/reason`、操作人、费用、银行账户或外部请求唯一标识；工程侧自行保存运行追踪。
 
 ---
 
@@ -354,3 +358,24 @@
 - 属性：**写操作工具（通知/催办）**。
 - 自动重试：**0 次**（避免由于微服务超时造成重复重发骚扰管家）。
 - 异常处置：接口报错时转人工服务管家排查。
+
+---
+
+## query_asset_manager_next_contact_time
+
+**功能**：根据推进记录中的资管成功联系事实计算下次追问时间。HTTP 路径为 `POST /secure/agentTool/ownerTermination/queryAssetManagerNextContactTime`，不代替资管授权查询，也不返回资管指定的稍后联系时间。
+
+| 入参 | 类型 | 必填 | 说明 |
+| :--- | :--- | :---: | :--- |
+| `executionId` | Long | 是 | 解约推进记录 ID，不能使用协同工单 orderId 替代 |
+| `sessionId` | String | 否 | 会话链路 ID |
+| `requestId` | String | 否 | 请求链路 ID |
+
+| 成功响应 data 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `remindCount` | Integer | 已成功联系次数减一，即已完成的追问次数 |
+| `nextContactTime` | String 或 null | 带时区的 ISO 8601 下次联系时间，追问耗尽时为 null |
+
+- 初次成功联系后，工具计算 2 小时后的时间；完成一次追问后为上次成功联系时间加 4 小时；完成两次追问后为上次成功联系日期次日 10:00（上海时区）；完成三次追问后返回 null。Skill 直接读取结果，不自行计算。
+- 先判断 `errno="0"`，再读取完整的 `data`。仅成功返回 `remindCount>=3` 且 `nextContactTime=null` 时按三次追问耗尽处理。
+- 无成功联系记录、推进能力未启用等情况会失败，不能把报错当作没有回复或追问耗尽。联系接口仅受理时应等待发送回执，不声称已成功联系。

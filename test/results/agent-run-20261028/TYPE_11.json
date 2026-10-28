@@ -1,0 +1,54 @@
+{
+  "id": "TYPE_11",
+  "title": "托管中途解约",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "托管中途解约",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {},
+  "userMessage": null,
+  "expected": {
+    "command": "end",
+    "lastTool": "query_owner_intention",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "TERMINATE",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:52:41.180684+00:00"
+    }
+  ],
+  "output": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "当前解约类型不在本期自动化处理范围: 托管中途解约，提前结束本次自动推进"
+  },
+  "errors": [],
+  "passed": true
+}

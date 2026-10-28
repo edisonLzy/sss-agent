@@ -7,7 +7,7 @@ description: 处理业主首招到期和委托到期的自助解约起草任务�
 
 ## 目标
 
-本 Skill 处理首招到期和委托到期的解约起草发起：完成入口防重、业务前置核验和资管授权后，直接调用合同侧 `triggerAutoTermination`。起草成功返回 `command: null`，本轮结束，后续办理交工程侧。本期不执行起草后的合同结果查询、事件接续、催签或回访。
+本 Skill 处理首招到期和委托到期的解约起草发起：完成入口防重、业务前置核验和资管授权后，通过 Landlord Tool `trigger_auto_termination` 调用合同侧接口。起草成功返回 `command: null`，本轮结束，后续办理交工程侧。本期不执行起草后的合同结果查询、事件接续、催签或回访。
 
 - **业务场景**：首招到期解约、委托到期解约。
 - **业务边界**：本期明确**不处理续约流程**（若意向为续约则输出 `end` 提前结束任务），且**不处理中途解约**（如托管中途解约、首次招租中途解约）。
@@ -16,18 +16,7 @@ description: 处理业主首招到期和委托到期的自助解约起草任务�
 
 所有由外部上游宿主环境或调度器注入的运行时变量均归属在 `fields` 作用域下，在工作流程与工具调用参数中必须使用 `{{fields.xxx}}` 语法进行引用（例如：`orderId: {{fields.orderId}}`）。运行时字段为严格只读，严禁在执行中修改或伪造。
 
-详细字段定义、取值语义与边界约束参见 [resources/runtime-fields.md](resources/runtime-fields.md)。
-
-| 字段表达式 | 类型 | 必填 | 说明 |
-| :--- | :--- | :---: | :--- |
-| `{{fields.orderId}}` | Long | 是 | 续解业务协同工单 ID，用于意向查询与全流程工单串联 |
-| `{{fields.contractCode}}` | String | 是 | 业主原收房合同编号（托管合同编号），用于协议防重与交割查询 |
-| `{{fields.contractId}}` | Long | 是 | 大于 0 的业主原收房合同主键 ID，用于触发合同自动解约起草；与 `contractCode` 分别传入 |
-| `{{fields.terminationType}}` | String | 是 | 解约类型描述，本期仅支持 `首招到期` 或 `委托到期` |
-| `{{fields.backDate}}` | Date | 起草时必填 | 上游按合同 DTO 提供的还房日，统一业务时区当天零点，原样透传 |
-| `{{fields.executionId}}` | Long | 否 | 业主解约推进事实记录 ID，有值时优先作为资管授权推进查询与催办的入参 |
-| `{{fields.sessionId}}` | String | 否 | 会话链路追踪 ID，有值时原样透传给各工具 |
-| `{{fields.requestId}}` | String | 否 | 请求链路追踪 ID，有值时原样透传给各工具 |
+字段清单：`orderId`、`contractCode`、`contractId`、`terminationType`、`backDate`（均必填）、`executionId`、`sessionId`、`requestId`（均选填）。详细字段定义、取值语义与边界约束参见 [resources/runtime-fields.md](resources/runtime-fields.md)。
 
 ## 重要规则
 
@@ -57,8 +46,8 @@ description: 处理业主首招到期和委托到期的自助解约起草任务�
    })
    ```
 
-3. **直接使用合同侧工具名称和 DTO**：
-   入口防重沿用现有 `query_owner_termination_agreement` 及其原参数。发起起草直接调用合同侧 `triggerAutoTermination`，只传 `contractId/terminationType/backDate`，直接读取原生响应的 `autoApplyId/terminationContractId/applyStatus/currentNode`，不设置工具别名或 Draft 协议转换。起草工具待 Landlord 实现、注册，定义见 [tool-contracts.md](resources/tool-contracts.md#triggerautotermination)。
+3. **使用 Landlord 起草工具**：
+   入口防重沿用现有 `query_owner_termination_agreement` 及其原参数；发起起草调用 `trigger_auto_termination`。字段契约、响应结构与部署/注册核实要求见 [tool-contracts.md](resources/tool-contracts.md#trigger_auto_termination)。
 
 ## 工作流程
 
@@ -83,14 +72,14 @@ flowchart TD
 
 在执行任何业务逻辑与工具调用前，首先校验必要运行时参数的完整性：
 
-1. 检查必填字段 `{{fields.orderId}}`、`{{fields.contractCode}}`、`{{fields.contractId}}`、`{{fields.terminationType}}` 是否均存在且非空；`contractId` 必须是大于 0 的 Long。`backDate` 在调用合同触发工具前校验。
+1. 检查必填字段 `{{fields.orderId}}`、`{{fields.contractCode}}`、`{{fields.contractId}}`、`{{fields.terminationType}}`、`{{fields.backDate}}` 是否均存在且非空；`contractId` 必须是大于 0 的 Long。
 2. 若任一必填字段缺失或为空，属于运行参数缺失异常，直接转交人工管家排查：
    ```json
    Return({
      "command": "transfer_to_human",
      "nextScheduleAt": null,
      "finalAnswer": null,
-     "reason": "前置校验失败：缺失必填运行参数（orderId/contractCode/contractId/terminationType），转人工服务管家核验"
+     "reason": "前置校验失败：缺失必填运行参数（orderId/contractCode/contractId/terminationType/backDate），转人工服务管家核验"
    })
    ```
 
@@ -176,8 +165,8 @@ Call({
 ## 安全护栏（Guardrails）
 
 1. **写操作安全与准入判定**：
-   - 起草协议写接口（`triggerAutoTermination`）调用前必须满足全部前置条件：业主意向确认解约（`TERMINATE`）、资管明确同意（`AGREE_DRAFT`）、无在途冲突协议，且委托到期场景下租客交割已完成且无物损（`canProceedTermination == true`）。
-   - 合同明确返回前置业务校验不通过或自动申请失败/人工终止时，按 [起草返回处理](resources/tool-contracts.md#起草返回处理) 输出 `end`，记录接口实际返回的原因及申请、节点信息；本期不追加失败详情查询，不编造原生响应未返回的原因。
+   - 起草协议写接口（`trigger_auto_termination`）调用前必须满足全部前置条件：业主意向确认解约（`TERMINATE`）、资管明确同意（`AGREE_DRAFT`）、无在途冲突协议，且委托到期场景下租客交割已完成且无物损（`canProceedTermination == true`）。
+   - 合同明确返回前置业务校验不通过或自动申请失败/人工终止时，按 [起草返回处理](resources/tool-contracts.md#起草返回处理) 输出 `end`。
    - 技术异常、未接入、超时或结果不确定不按业务校验失败处理。不得盲目重试起草；无法按工具契约确认结果或自动恢复时，输出 `command: "transfer_to_human"`，保留原始报错。具体异常及参数修正规则见 [resources/tool-contracts.md](resources/tool-contracts.md)。
 
 2. **读操作异常分级治理**：
@@ -196,9 +185,7 @@ Call({
 
 ## 完成判定
 
-1. **起草成功或申请执行中**：
-   - `triggerAutoTermination` 返回有效 `autoApplyId`，且 `applyStatus=1/2` 时，输出 `command: null`、`nextScheduleAt: null`，不再调用合同查询，也不安排催签。
-   - `applyStatus=1` 且 `terminationContractId` 非空时，允许通过群消息出口播报“协议已起草、后续办理中”；尚无协议 ID 时只能说明“申请已受理”。`applyStatus=2` 仅表示已发送业主，本 Skill 不处理签约通知或推断实际签署。
+1. **起草成功或申请执行中**：按 [起草返回处理](resources/tool-contracts.md#起草返回处理) 判定为成功时，输出 `command: null`、`nextScheduleAt: null`：
    ```json
    Return({
      "command": null,
@@ -209,6 +196,4 @@ Call({
    ```
    不需要或不允许群发时，`finalAnswer=null`。工程侧持久化原生返回信息，后续结果处理不属于本期 Skill。
 
-2. **业务阻断或发起失败**：
-   - 入口查到已有有效解约协议、续约或在租等互斥条件时，输出 `end`，记录原因；合同原生响应的失败和人工终止也按“起草返回处理”结束本次发起。
-   - `end` 表示本次发起任务结束，不代表合同已解约或业主已签署。
+2. **业务阻断或发起失败**：入口查到已有有效解约协议、续约或在租等互斥条件，或合同侧按 [起草返回处理](resources/tool-contracts.md#起草返回处理) 判定为失败/人工终止时，输出 `end` 并记录原因；`end` 表示本次发起任务结束，不代表合同已解约或业主已签署。

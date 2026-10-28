@@ -1,0 +1,758 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>解约技能执行回放</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* layout: sticky stat header + two-pane workbench (filterable case rail / step-by-step trace inspector), stacking to one column on phone */
+:root{
+  --bg:#f2efe6; --surface:#ffffff; --surface-2:#faf7ef; --border:#ddd4bf;
+  --fg:#201e18; --fg-muted:#716a59; --accent:#2f6459; --accent-fg:#ffffff; --accent-soft:#e3eeea;
+  --ok:#2f7a43; --ok-bg:#e3f2e5; --fail:#b23b34; --fail-bg:#fbe9e6; --warn:#a0691a; --warn-bg:#faefd8;
+  --code-bg:#11201b; --code-fg:#d9ead9; --code-border:rgba(255,255,255,.08);
+  --code-key:#8fd3c0; --code-str:#f0c988; --code-num:#9ecbff; --code-bool:#f3a0a0; --code-null:#8a9a92; --code-punc:#7f8f87;
+  --font-display:'IBM Plex Serif',Georgia,serif; --font-body:'IBM Plex Sans',system-ui,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14181a; --surface:#1c2123; --surface-2:#20262a; --border:#343c3e;
+    --fg:#e9e7de; --fg-muted:#9a9c92; --accent:#68bba8; --accent-fg:#0c1716; --accent-soft:#1d322e;
+    --ok:#6ad08a; --ok-bg:#163523; --fail:#f0918a; --fail-bg:#3a201d; --warn:#e4ba6f; --warn-bg:#3a2e16;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181a; --surface:#1c2123; --surface-2:#20262a; --border:#343c3e;
+  --fg:#e9e7de; --fg-muted:#9a9c92; --accent:#68bba8; --accent-fg:#0c1716; --accent-soft:#1d322e;
+  --ok:#6ad08a; --ok-bg:#163523; --fail:#f0918a; --fail-bg:#3a201d; --warn:#e4ba6f; --warn-bg:#3a2e16;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);margin:0;line-height:1.5}
+.shell{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 48px}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;margin:0;text-wrap:balance}
+code,.mono,.num{font-family:var(--font-mono)}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+button{font-family:inherit;cursor:pointer}
+::selection{background:var(--accent-soft)}
+
+/* ---------- header ---------- */
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-muted);font-weight:600;margin:0 0 6px}
+.page-title{font-size:clamp(24px,3.4vw,32px)}
+.page-desc{color:var(--fg-muted);max-width:68ch;margin:10px 0 0;font-size:14.5px}
+.page-desc code{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12.5px}
+
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-top:20px}
+.stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 16px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.stat-tile .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-muted);font-weight:600}
+.stat-tile .v{font-size:23px;font-weight:600}
+.stat-tile .v.ok{color:var(--ok)}
+.stat-tile .v.fail{color:var(--fail)}
+.stat-tile .sub{font-size:11.5px;color:var(--fg-muted)}
+
+/* ---------- workbench ---------- */
+.workbench{display:grid;grid-template-columns:336px minmax(0,1fr);gap:16px;margin-top:22px;align-items:start}
+@media (max-width:880px){.workbench{grid-template-columns:1fr}}
+
+.rail{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;max-height:76vh}
+@media (max-width:880px){.rail{max-height:46vh}}
+.rail-head{padding:12px 12px 10px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2;display:flex;flex-direction:column;gap:8px}
+.search{position:relative}
+.search input{width:100%;padding:8px 10px 8px 30px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--fg);font-size:13.5px;min-width:0}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.rail-count{font-size:11.5px;color:var(--fg-muted);padding:7px 14px 2px}
+.case-list{list-style:none;margin:0;padding:4px 8px 10px;overflow-y:auto}
+.case-row{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:9px;padding:8px 9px;margin:2px 0;color:inherit}
+.case-row:hover{background:var(--surface-2)}
+.case-row[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.case-row .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.case-row .id{font-size:10.5px;color:var(--fg-muted);letter-spacing:.02em}
+.case-row .calls{font-size:10.5px;color:var(--fg-muted)}
+.case-row .title{font-size:13.5px;font-weight:500;margin-top:2px;display:block}
+.case-row .badges{display:flex;gap:5px;margin-top:6px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dot.ok{background:var(--ok)}
+.dot.fail{background:var(--fail)}
+.dot.pending{background:var(--fg-muted)}
+.tag{font-size:10px;font-weight:600;letter-spacing:.03em;padding:1.5px 6px;border-radius:5px;background:var(--surface-2);color:var(--fg-muted);border:1px solid var(--border)}
+.empty-row{padding:22px 14px;color:var(--fg-muted);font-size:13px;text-align:center}
+
+/* ---------- detail ---------- */
+.detail{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px 26px;min-width:0}
+.detail-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px 20px}
+.detail-head .id{font-size:12px;color:var(--fg-muted);margin:0 0 3px}
+.detail-head h2{font-size:21px}
+.detail-head .scenario{color:var(--fg-muted);font-size:13px;margin-top:4px}
+.status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;white-space:nowrap;height:fit-content}
+.status-pill.ok{background:var(--ok-bg);color:var(--ok)}
+.status-pill.fail{background:var(--fail-bg);color:var(--fail)}
+
+.meta-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.cmd-badge{font-family:var(--font-mono);font-size:11.5px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2)}
+.cmd-badge.cmd-schedule{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.cmd-badge.cmd-end{background:var(--surface-2);color:var(--fg-muted)}
+.cmd-badge.cmd-transfer_to_human{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.cmd-badge.cmd-null{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+.fields-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:9px 16px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.field{min-width:0}
+.field .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:600}
+.field .v{font-size:13.5px;margin-top:2px;word-break:break-word}
+.field .v.null{color:var(--fg-muted);font-style:italic}
+
+.msg-bubble{margin-top:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;max-width:62ch}
+.msg-bubble .who{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:600;margin-bottom:4px}
+.msg-bubble .txt{font-size:13.5px}
+.msg-bubble.out{background:var(--accent-soft)}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:18px}
+.btn{border-radius:9px;padding:8px 15px;font-size:13.5px;font-weight:600;border:1px solid var(--border);background:var(--surface-2);color:var(--fg);display:inline-flex;align-items:center;gap:6px}
+.btn:hover{filter:brightness(0.97)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.btn.primary:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--fg-muted);user-select:none}
+.toggle input{accent-color:var(--accent)}
+
+.timeline{position:relative;margin-top:20px;padding-left:26px}
+.timeline::before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--border)}
+.turn-wrap{margin-bottom:6px}
+.turn-label{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin:18px 0 4px -26px;padding-left:26px}
+.resume-divider{position:relative;margin:16px 0 20px;padding:10px 14px 10px 16px;background:var(--surface-2);border:1px dashed var(--border);border-radius:10px;margin-left:-26px;margin-right:0}
+.resume-divider .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:700;margin-bottom:4px}
+
+.step{position:relative;padding:0 0 18px;opacity:0;transform:translateY(4px);animation:stepIn .28s ease forwards}
+@keyframes stepIn{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.step{animation:none;opacity:1;transform:none}}
+.step::before{content:"";position:absolute;left:-21px;top:3px;width:11px;height:11px;border-radius:50%;background:var(--surface);border:2px solid var(--fg-muted)}
+.step.ok::before{border-color:var(--ok)}
+.step.fail::before{border-color:var(--fail)}
+.step.final::before{background:var(--accent);border-color:var(--accent)}
+.step-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px}
+.step-head .tool{font-family:var(--font-mono);font-weight:600;font-size:13.5px}
+.step-seq{font-size:10.5px;color:var(--fg-muted)}
+.errno-tag{font-size:10.5px;font-family:var(--font-mono);padding:1.5px 6px;border-radius:5px}
+.errno-tag.ok{background:var(--ok-bg);color:var(--ok)}
+.errno-tag.fail{background:var(--fail-bg);color:var(--fail)}
+
+.code-panes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+@media (max-width:620px){.code-panes{grid-template-columns:1fr}}
+.code-pane{min-width:0}
+.code-pane .lab{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:600;margin-bottom:4px}
+.copy-btn{font-size:10px;font-weight:600;border:1px solid var(--code-border);background:transparent;color:var(--code-fg);opacity:.6;border-radius:5px;padding:1px 6px}
+.copy-btn:hover{opacity:1}
+pre.code{margin:0;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--code-border);border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.55;overflow-x:auto}
+pre.code code{font-family:var(--font-mono)}
+.k-key{color:var(--code-key)}
+.k-str{color:var(--code-str)}
+.k-num{color:var(--code-num)}
+.k-bool{color:var(--code-bool)}
+.k-null{color:var(--code-null)}
+.k-punc{color:var(--code-punc)}
+
+.return-card{margin-top:4px;border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--surface-2)}
+.verdict{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;margin-bottom:12px}
+.verdict.ok{color:var(--ok)}
+.verdict.fail{color:var(--fail)}
+.err-list{margin:6px 0 12px;padding-left:18px;color:var(--fail);font-size:13px}
+.return-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px 18px}
+.return-grid .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:600}
+.return-grid .v{font-size:13.5px;margin-top:3px}
+.reason-box{margin-top:12px;font-size:13px;color:var(--fg)}
+.reason-box .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-muted);font-weight:600;margin-bottom:3px}
+
+.running-note{font-size:12.5px;color:var(--accent);display:flex;align-items:center;gap:7px;margin-top:14px}
+.spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+.mode-tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--border)}
+.mode-tab{padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--fg-muted);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.mode-tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.live-note{font-size:12.5px;color:var(--fg-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;margin-top:16px}
+.live-note code{font-family:var(--font-mono);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+.step.llm::before{border-color:var(--accent);background:var(--accent-soft)}
+.step.pending::before{border-color:var(--fg-muted)}
+.step.thinking::before{border-color:var(--fg-muted);background:var(--surface-2)}
+.step.thinking .think-box{font-size:12.5px;line-height:1.6;color:var(--fg-muted);font-style:italic;white-space:pre-wrap;background:var(--surface-2);border:1px dashed var(--border);border-radius:9px;padding:9px 12px;margin-top:8px}
+.step.thinking summary{cursor:pointer;list-style:none}
+.step.thinking summary::-webkit-details-marker{display:none}
+.step.thinking summary .step-head{display:flex;align-items:center;gap:8px}
+.step.thinking summary .caret{font-size:10px;color:var(--fg-muted);transition:transform .15s ease}
+.step.thinking[open] summary .caret{transform:rotate(90deg)}
+
+.field-label{display:block;font-size:12px;color:var(--fg-muted);margin-bottom:6px}
+.live-input{width:100%;font:inherit;font-size:13.5px;color:var(--fg);background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 11px;resize:vertical;min-height:40px}
+.live-input:focus{outline:2px solid var(--accent-soft);outline-offset:1px}
+.live-block{margin-top:16px}
+.live-continue{margin-top:6px;padding-top:16px;border-top:1px dashed var(--border)}
+.live-continue .row{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.live-continue .row .live-input{flex:1}
+
+footer{margin-top:28px;color:var(--fg-muted);font-size:12px;text-align:center}
+</style>
+
+<div class="shell">
+  <p class="eyebrow">owner-self-termination · Skill 自测回放</p>
+  <h1 class="page-title">业主自助解约技能 · 全场景执行回放</h1>
+  <p class="page-desc">92 个用例、95 轮对话。「历史记录回放」展示 Agent 此前实际读取 <code>SKILL.md</code> 与两份 SOP 后逐步选择工具、调用 Mock 接口并产出四字段终局输出的完整记录；「实时执行」会在本机真实启动一次 Agent，当场加载 Skill、展示其思考过程并对该用例重新做出决策，支持手动输入资管/业主的回复消息、以 Resume 方式继续推进同一个工单。</p>
+
+  <div class="stat-row" id="statRow"></div>
+
+  <div class="workbench">
+    <aside class="rail">
+      <div class="rail-head">
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="searchInput" type="text" placeholder="搜索用例 ID 或标题…" autocomplete="off">
+        </div>
+        <div class="chip-row" id="chipRow"></div>
+      </div>
+      <p class="rail-count" id="railCount"></p>
+      <ul class="case-list" id="caseList"></ul>
+    </aside>
+
+    <section class="detail" id="detail">
+      <p class="empty-row">正在加载用例数据…</p>
+    </section>
+  </div>
+
+  <footer>虚拟业务时钟 2026-10-28 10:00:00+08:00 · 所有合同、工单与消息均为合成 Mock 数据，无真实系统副作用。</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var CATS = {PARAM:"参数校验", INTENT:"意向分流", TYPE:"类型路由", FR:"首招到期", WT:"委托到期", TIME:"追问边界"};
+var CMD_LABEL = {end:"end · 结束关单", schedule:"schedule · 定时唤醒", transfer_to_human:"transfer_to_human · 转人工"};
+var FIELD_LABEL = {orderId:"orderId",contractCode:"contractCode",contractId:"contractId",terminationType:"terminationType",backDate:"backDate",executionId:"executionId",sessionId:"sessionId",requestId:"requestId"};
+
+var DATA = null, CASES = [], activeId = null, activeCat = "ALL", activeQuery = "", animToken = 0;
+var detailMode = "history", currentES = null;
+
+function slug(id){ return id.replace(/_/g,"-"); }
+function unslug(s){ return s.replace(/-/g,"_"); }
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+/* ---------- tiny JSON syntax highlighter ---------- */
+function highlightJSON(value){
+  var json = JSON.stringify(value, null, 2);
+  if (json === undefined) json = "undefined";
+  var escaped = esc(json);
+  return escaped.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, function(match){
+    var cls = "k-num";
+    if (/^"/.test(match)) cls = /:$/.test(match) ? "k-key" : "k-str";
+    else if (/true|false/.test(match)) cls = "k-bool";
+    else if (/null/.test(match)) cls = "k-null";
+    return '<span class="'+cls+'">'+match+'</span>';
+  }).replace(/([{}\[\],])/g, '<span class="k-punc">$1</span>');
+}
+
+function codeBlock(label, value, keyId){
+  var text = JSON.stringify(value, null, 2) || "null";
+  return '<div class="code-pane">'+
+    '<div class="lab"><span>'+label+'</span><button type="button" class="copy-btn" data-copy="'+keyId+'">复制</button></div>'+
+    '<pre class="code" id="'+keyId+'" data-raw="'+esc(text)+'"><code>'+highlightJSON(value)+'</code></pre>'+
+  '</div>';
+}
+
+/* ---------- data loading & stats ---------- */
+fetch("data.json").then(function(r){ return r.json(); }).then(function(d){
+  DATA = d; CASES = d.cases;
+  renderStats(d.summary);
+  renderChips(d.summary);
+  renderList();
+  var startId = (location.hash || "").slice(1);
+  startId = startId ? unslug(startId) : "";
+  var start = CASES.find(function(c){ return c.id === startId; }) || CASES.find(function(c){ return c.id === "FR_AM_UNCLEAR"; }) || CASES[0];
+  selectCase(start.id, {animate:false, updateHash:true});
+}).catch(function(err){
+  document.getElementById("detail").innerHTML = '<p class="empty-row">数据加载失败：'+esc(err.message)+'</p>';
+});
+
+function renderStats(s){
+  var tiles = [
+    {k:"用例总数", v:s.total, cls:""},
+    {k:"通过", v:s.passed, cls:"ok"},
+    {k:"失败", v:s.failed, cls: s.failed ? "fail" : "ok"},
+    {k:"未完成", v:s.incomplete, cls: s.incomplete ? "fail" : ""},
+    {k:"工具调用总数", v:s.totalCalls, cls:""},
+    {k:"通过率", v:Math.round(s.passed/s.total*1000)/10 + "%", cls: s.passed===s.total ? "ok" : ""}
+  ];
+  document.getElementById("statRow").innerHTML = tiles.map(function(t){
+    return '<div class="stat-tile"><span class="k">'+t.k+'</span><span class="v num '+t.cls+'">'+t.v+'</span></div>';
+  }).join("");
+}
+
+function renderChips(s){
+  var cats = ["ALL"].concat(s.categories);
+  document.getElementById("chipRow").innerHTML = cats.map(function(c){
+    var label = c === "ALL" ? "全部" : (CATS[c] || c);
+    var count = c === "ALL" ? s.total : CASES.filter(function(x){ return x.category === c; }).length;
+    return '<button type="button" class="chip" data-cat="'+c+'" aria-pressed="'+(c===activeCat)+'">'+label+' <span class="num">'+count+'</span></button>';
+  }).join("");
+}
+document.getElementById("chipRow").addEventListener("click", function(e){
+  var btn = e.target.closest(".chip"); if(!btn || !DATA) return;
+  activeCat = btn.getAttribute("data-cat");
+  renderChips(DATA.summary); renderList();
+});
+
+function filteredCases(){
+  var q = activeQuery.trim().toLowerCase();
+  return CASES.filter(function(c){
+    if (activeCat !== "ALL" && c.category !== activeCat) return false;
+    if (q && c.id.toLowerCase().indexOf(q) === -1 && c.title.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
+}
+
+function renderList(){
+  var list = filteredCases();
+  document.getElementById("railCount").textContent = list.length + " / " + CASES.length + " 个用例";
+  var ul = document.getElementById("caseList");
+  if (!list.length){ ul.innerHTML = '<li class="empty-row">没有匹配的用例</li>'; return; }
+  ul.innerHTML = list.map(function(c){
+    var cmd = c.output ? JSON.stringify(c.output.command) : "—";
+    var dotCls = !c.output ? "pending" : (c.passed ? "ok" : "fail");
+    return '<li><button type="button" class="case-row" data-id="'+c.id+'" aria-current="'+(c.id===activeId)+'">'+
+      '<span class="top"><span class="id mono">'+esc(c.id)+'</span><span class="calls num">'+c.callCount+' 次调用</span></span>'+
+      '<span class="title">'+esc(c.title)+'</span>'+
+      '<span class="badges"><span class="dot '+dotCls+'"></span><span class="tag">'+CATS[c.category]+'</span><span class="tag mono">'+esc(cmd)+'</span></span>'+
+    '</button></li>';
+  }).join("");
+}
+
+document.getElementById("caseList").addEventListener("click", function(e){
+  var btn = e.target.closest(".case-row"); if(!btn) return;
+  selectCase(btn.getAttribute("data-id"), {animate:false, updateHash:true});
+});
+document.getElementById("searchInput").addEventListener("input", function(e){
+  activeQuery = e.target.value; renderList();
+});
+window.addEventListener("hashchange", function(){
+  var id = unslug((location.hash||"").slice(1));
+  if (id && id !== activeId && CASES.some(function(c){return c.id===id;})) selectCase(id, {animate:false, updateHash:false});
+});
+
+/* ---------- turn reconstruction ---------- */
+function buildTurns(c){
+  var traj = c.trajectory || [];
+  var segments = [[]], resumes = [];
+  traj.forEach(function(step){
+    if (step.kind === "Resume"){ resumes.push(step); segments.push([]); }
+    else segments[segments.length-1].push(step);
+  });
+  return segments.map(function(steps, i){
+    var isLast = i === segments.length - 1;
+    var hist = c.turnHistory && c.turnHistory[i];
+    return {
+      index: i+1,
+      incoming: i===0 ? c.userMessage : (resumes[i-1] && resumes[i-1].userMessage),
+      steps: steps,
+      output: isLast ? c.output : (hist && hist.output),
+      passed: isLast ? c.passed : (hist && hist.passed),
+      errors: (isLast ? c.errors : (hist && hist.errors)) || []
+    };
+  });
+}
+
+/* ---------- rendering a case ---------- */
+function fieldValue(v){
+  if (v === null || v === undefined) return '<span class="v null">null</span>';
+  return '<span class="v mono">'+esc(v)+'</span>';
+}
+
+function renderHeaderAndShell(c){
+  var turns = buildTurns(c);
+  var multi = turns.length > 1;
+  var cmd = c.output ? c.output.command : null;
+  var cmdCls = c.output ? "cmd-"+String(cmd) : "";
+  var cmdText = c.output ? (cmd===null ? "null · 静默继续" : (CMD_LABEL[cmd]||cmd)) : "尚未产出结果";
+
+  var fieldsHtml = Object.keys(FIELD_LABEL).map(function(k){
+    return '<div class="field"><div class="k">'+FIELD_LABEL[k]+'</div>'+fieldValue(c.fields[k])+'</div>';
+  }).join("");
+
+  var html = ''+
+  '<div class="detail-head">'+
+    '<div><p class="id mono">'+esc(c.id)+'</p><h2>'+esc(c.title)+'</h2>'+
+    '<p class="scenario">场景 Mock：<code class="mono">'+esc(c.scenario)+'</code>'+(multi ? ' · 共 '+turns.length+' 轮对话' : '')+'</p></div>'+
+    '<span class="status-pill '+(c.passed?"ok":"fail")+'">'+(c.passed ? "✓ 历史记录验证通过" : "✗ 历史记录未通过") +'</span>'+
+  '</div>'+
+  '<div class="meta-row"><span class="tag">'+CATS[c.category]+'</span><span class="cmd-badge '+cmdCls+'">'+esc(cmdText)+'</span><span class="tag">'+c.callCount+' 次工具调用（历史记录）</span></div>'+
+  '<div class="fields-grid">'+fieldsHtml+'</div>'+
+  (c.userMessage ? '<div class="msg-bubble"><div class="who">业主群 · 初始消息</div><div class="txt">'+esc(c.userMessage)+'</div></div>' : '')+
+  '<div class="mode-tabs" role="tablist">'+
+    '<button type="button" class="mode-tab" data-mode="history" aria-selected="'+(detailMode==="history")+'">历史记录回放</button>'+
+    '<button type="button" class="mode-tab" data-mode="live" aria-selected="'+(detailMode==="live")+'">实时执行（真实 Agent）</button>'+
+  '</div>'+
+  '<div id="modeBody"></div>';
+  document.getElementById("detail").innerHTML = html;
+  document.querySelectorAll(".mode-tab").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      detailMode = btn.getAttribute("data-mode");
+      document.querySelectorAll(".mode-tab").forEach(function(b){ b.setAttribute("aria-selected", String(b===btn)); });
+      renderDetailBody(c);
+    });
+  });
+  renderDetailBody(c);
+}
+
+function renderDetailBody(c){
+  if (currentES) { currentES.close(); currentES = null; }
+  if (detailMode === "live") renderLiveBody(c); else renderHistoryBody(c);
+}
+
+function renderHistoryBody(c){
+  var html = ''+
+  '<div class="controls">'+
+    '<button type="button" class="btn primary" id="playBtn">▶ 回放历史记录</button>'+
+    '<label class="toggle"><input type="checkbox" id="instantToggle"> 跳过动画，直接展开</label>'+
+  '</div>'+
+  '<div class="timeline" id="timeline"></div>';
+  document.getElementById("modeBody").innerHTML = html;
+  document.getElementById("playBtn").addEventListener("click", function(){ playCase(c); });
+  renderTimeline(c, {instant:true});
+}
+
+function selectCase(id, opts){
+  var c = CASES.find(function(x){ return x.id === id; });
+  if (!c) return;
+  activeId = id;
+  if (opts && opts.updateHash) history.replaceState(null, "", "#"+slug(id));
+  renderList();
+  renderHeaderAndShell(c);
+}
+
+/* ---------- step markup ---------- */
+function stepCallHtml(step, seq){
+  var ok = step.response && step.response.errno === "0";
+  var errnoTag = step.response ? '<span class="errno-tag '+(ok?"ok":"fail")+'">errno '+esc(step.response.errno)+' · '+esc(step.response.errmsg||"")+'</span>' : "";
+  return '<div class="step '+(ok?"ok":"fail")+'">'+
+    '<div class="step-head"><span class="tag mono">Call</span><span class="tool">'+esc(step.name)+'</span>'+errnoTag+'<span class="step-seq">#'+seq+'</span></div>'+
+    '<div class="code-panes">'+codeBlock("入参 payload", step.payload, "pre-"+seq+"-in")+codeBlock("返回 response", step.response, "pre-"+seq+"-out")+'</div>'+
+  '</div>';
+}
+
+function stepResumeHtml(step){
+  return '<div class="resume-divider"><div class="lab">⤴ Resume · 新一轮外部消息</div><div class="msg-bubble" style="margin-top:0"><div class="who">业主群 · 新消息</div><div class="txt">'+esc(step.userMessage)+'</div></div></div>';
+}
+
+function returnCardHtml(turn){
+  if (!turn.output) return '<div class="step"><div class="return-card"><span class="verdict">⏳ 本轮尚未产出 Return</span></div></div>';
+  var o = turn.output;
+  var errHtml = (turn.errors && turn.errors.length) ? '<ul class="err-list">'+turn.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join("")+'</ul>' : "";
+  return '<div class="step final">'+
+    '<div class="return-card">'+
+      '<div class="verdict '+(turn.passed?"ok":"fail")+'">'+(turn.passed ? "✓ 验证通过" : "✗ 验证未通过")+'</div>'+
+      errHtml+
+      '<div class="return-grid">'+
+        '<div><div class="k">command</div><div class="v mono">'+esc(JSON.stringify(o.command))+'</div></div>'+
+        '<div><div class="k">nextScheduleAt</div><div class="v mono">'+(o.nextScheduleAt?esc(o.nextScheduleAt):'<span class="v null">null</span>')+'</div></div>'+
+      '</div>'+
+      '<div class="reason-box"><div class="k">finalAnswer（企微业主群消息）</div>'+
+        (o.finalAnswer ? '<div class="msg-bubble out" style="margin-top:6px"><div class="who">Agent → 业主群</div><div class="txt">'+esc(o.finalAnswer)+'</div></div>' : '<div class="v null">null · 不发群消息</div>')+
+      '</div>'+
+      '<div class="reason-box"><div class="k">reason</div><div>'+esc(o.reason)+'</div></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderTimeline(c, opts){
+  var turns = buildTurns(c);
+  var tl = document.getElementById("timeline");
+  if (!tl) return;
+  tl.innerHTML = "";
+  if (opts && opts.instant){
+    var seq = 0, html = "";
+    turns.forEach(function(turn, ti){
+      if (ti > 0) html += stepResumeHtml({userMessage: turn.incoming});
+      if (turns.length > 1) html += '<div class="turn-label">轮次 '+turn.index+'</div>';
+      turn.steps.forEach(function(step){ seq++; html += stepCallHtml(step, seq); });
+      html += returnCardHtml(turn);
+    });
+    tl.innerHTML = html;
+  }
+}
+
+function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+function playCase(c){
+  var instant = document.getElementById("instantToggle").checked;
+  var token = ++animToken;
+  var tl = document.getElementById("timeline");
+  var playBtn = document.getElementById("playBtn");
+  tl.innerHTML = "";
+  var turns = buildTurns(c);
+
+  if (instant){ renderTimeline(c, {instant:true}); return; }
+
+  playBtn.disabled = true; playBtn.textContent = "执行中…";
+  var seq = 0;
+
+  (async function(){
+    for (var ti = 0; ti < turns.length; ti++){
+      if (token !== animToken) return;
+      var turn = turns[ti];
+      if (ti > 0){
+        tl.insertAdjacentHTML("beforeend", stepResumeHtml({userMessage: turn.incoming}));
+        tl.scrollIntoView({block:"nearest"});
+        await delay(420);
+        if (token !== animToken) return;
+      }
+      if (turns.length > 1) tl.insertAdjacentHTML("beforeend", '<div class="turn-label">轮次 '+turn.index+'</div>');
+      for (var si = 0; si < turn.steps.length; si++){
+        if (token !== animToken) return;
+        var note = document.createElement("div");
+        note.className = "running-note";
+        note.innerHTML = '<span class="spinner"></span> 正在调用 '+esc(turn.steps[si].name)+' …';
+        tl.appendChild(note);
+        await delay(360);
+        if (token !== animToken) return;
+        note.remove();
+        seq++;
+        tl.insertAdjacentHTML("beforeend", stepCallHtml(turn.steps[si], seq));
+      }
+      if (token !== animToken) return;
+      var finalNote = document.createElement("div");
+      finalNote.className = "running-note";
+      finalNote.innerHTML = '<span class="spinner"></span> 正在生成本轮 Return 四字段输出 …';
+      tl.appendChild(finalNote);
+      await delay(420);
+      if (token !== animToken) return;
+      finalNote.remove();
+      tl.insertAdjacentHTML("beforeend", returnCardHtml(turn));
+    }
+    if (token === animToken){ playBtn.disabled = false; playBtn.textContent = "↻ 重新运行"; }
+  })();
+}
+
+/* ---------- live mode：真实启动本机 Agent 执行 ---------- */
+var liveTurnCount = 0;
+
+function liveStepCallHtml(toolUseId, parsed, command){
+  var label = parsed && parsed.name ? parsed.name : "未能解析的调用";
+  var payloadValue = parsed ? parsed.payload : {raw: command};
+  return '<div class="step pending" id="live-'+toolUseId+'">'+
+    '<div class="step-head"><span class="tag mono">Call</span><span class="tool">'+esc(label)+'</span><span class="errno-tag" id="live-'+toolUseId+'-status">等待返回…</span></div>'+
+    '<div class="code-panes">'+
+      codeBlock("入参 payload", payloadValue, "live-"+toolUseId+"-in")+
+      '<div class="code-pane"><div class="lab"><span>返回 response</span></div><pre class="code" id="live-'+toolUseId+'-out" data-raw=""><code>…</code></pre></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function liveThinkingHtml(text){
+  return '<details class="step thinking" open><summary><div class="step-head"><span class="caret">▶</span><span class="tag mono">Thinking</span><span class="tool">思考过程</span></div></summary>'+
+    '<div class="think-box">'+esc(text)+'</div></details>';
+}
+
+function liveTextHtml(text){
+  return '<div class="step llm"><div class="step-head"><span class="tag mono">LLM</span><span class="tool">模型输出</span></div>'+
+    '<div class="msg-bubble" style="margin-top:8px"><div class="txt">'+esc(text).replace(/\n/g,"<br>")+'</div></div></div>';
+}
+
+function liveFinalHtml(d){
+  if (!d.output){
+    return '<div class="step fail"><div class="return-card"><div class="verdict fail">✗ 未能从模型最后输出中解析出合法的四字段 JSON</div>'+
+      '<div class="reason-box"><div class="k">模型最后一条消息原文</div><div>'+esc(d.rawText||"（空）")+'</div></div></div></div>';
+  }
+  var o = d.output, chk = d.check || {}, exp = d.expected || {};
+  var allOk = chk.commandMatch && chk.lastToolMatch && chk.draftCallsMatch;
+  var rows = [
+    {k:"command", ok:chk.commandMatch, got:JSON.stringify(o.command), want:JSON.stringify(exp.command)},
+    {k:"最后一次工具调用", ok:chk.lastToolMatch, got:String(d.lastTool), want:String(exp.lastTool)},
+    {k:"起草调用次数", ok:chk.draftCallsMatch, got:String(d.draftCalls), want:String(exp.draftCalls)}
+  ];
+  var noteTxt = (d.turnIndex && d.turnIndex > 1)
+    ? "（轻量核对：用例预期判据针对的是剧本最终结果，自由续写分支下仅供参考）"
+    : "（轻量核对：仅比对 command / 最后调用 / 起草次数，不等同于完整断言）";
+  return '<div class="step final">'+
+    '<div class="return-card">'+
+      '<div class="verdict '+(allOk?"ok":"fail")+'">'+(allOk?"✓ 与预期判据一致":"✗ 与预期判据不一致")+
+        '<span style="font-weight:400;color:var(--fg-muted);font-size:11.5px"> '+noteTxt+'</span></div>'+
+      '<div class="return-grid">'+rows.map(function(r){
+        return '<div><div class="k">'+r.k+(r.ok?" ✓":" ✗")+'</div><div class="v mono">实际 '+esc(r.got)+' · 预期 '+esc(r.want)+'</div></div>';
+      }).join("")+'</div>'+
+      '<div class="reason-box"><div class="k">finalAnswer（企微业主群消息）</div>'+
+        (o.finalAnswer ? '<div class="msg-bubble out" style="margin-top:6px"><div class="txt">'+esc(o.finalAnswer)+'</div></div>' : '<div class="v null">null · 不发群消息</div>')+
+      '</div>'+
+      '<div class="reason-box"><div class="k">reason</div><div>'+esc(o.reason)+'</div></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderLiveBody(c){
+  liveTurnCount = 0;
+  var html = ''+
+  '<div class="live-note">点击后会在本机真实启动一次 <code>claude</code> 命令行会话：加载 Skill 全文、展示其思考过程，通过 curl 调用 Mock 接口 <code>'+esc(c.id)+'</code> 做出真实决策，不是历史记录回放。会产生真实用量，通常耗时 10~60 秒，请确认 Mock Server 已通过 <code>PORT=18742 pnpm start</code> 启动。</div>'+
+  '<div class="live-block">'+
+    '<label class="field-label" for="liveInitMsg">首轮消息（可编辑；模拟业主或资管在当前轮次说的话，留空则不传入新消息，直接按运行时字段推进）</label>'+
+    '<textarea id="liveInitMsg" class="live-input" rows="2" placeholder="例如：发吧，可以起草。">'+esc(c.userMessage||"")+'</textarea>'+
+  '</div>'+
+  '<div class="controls">'+
+    '<button type="button" class="btn primary" id="liveRunBtn">▶ 真实运行此用例</button>'+
+    '<span class="rail-count" id="liveCostNote" style="padding:0"></span>'+
+  '</div>'+
+  '<div class="timeline" id="liveTimeline"></div>'+
+  '<div class="live-continue">'+
+    '<label class="field-label" for="liveNextMsg">继续对话：输入下一条消息（模拟资管或业主的后续回复），沿用同一个 Mock 工单的真实状态、不重置，等同于 Skill 文档中的 Resume</label>'+
+    '<div class="row">'+
+      '<textarea id="liveNextMsg" class="live-input" rows="2" placeholder="例如：我是说可以起草，发吧。"></textarea>'+
+      '<button type="button" class="btn" id="liveContinueBtn">发送并继续</button>'+
+    '</div>'+
+  '</div>';
+  document.getElementById("modeBody").innerHTML = html;
+  document.getElementById("liveRunBtn").addEventListener("click", function(){ runLiveStart(c); });
+  document.getElementById("liveContinueBtn").addEventListener("click", function(){ runLiveContinue(c); });
+}
+
+function wireLiveStream(es, tl, costNote, opts){
+  es.addEventListener("status", function(e){
+    var d = JSON.parse(e.data);
+    var text = d.note || (d.phase === "agent_started" ? ("Agent 已启动"+(d.model ? "（模型："+esc(d.model)+"）" : "")) : d.phase);
+    tl.insertAdjacentHTML("beforeend", '<p class="empty-row" style="text-align:left;padding:4px 0">'+esc(text)+'</p>');
+  });
+  es.addEventListener("llm_thinking", function(e){
+    var d = JSON.parse(e.data);
+    tl.insertAdjacentHTML("beforeend", liveThinkingHtml(d.text));
+  });
+  es.addEventListener("llm_text", function(e){
+    var d = JSON.parse(e.data);
+    tl.insertAdjacentHTML("beforeend", liveTextHtml(d.text));
+  });
+  es.addEventListener("tool_call", function(e){
+    var d = JSON.parse(e.data);
+    tl.insertAdjacentHTML("beforeend", liveStepCallHtml(d.toolUseId, d.parsed, d.command));
+  });
+  es.addEventListener("tool_result", function(e){
+    var d = JSON.parse(e.data);
+    var el = document.getElementById("live-"+d.toolUseId);
+    if (!el) return;
+    var ok = !d.isError && d.response && d.response.errno === "0";
+    el.classList.remove("pending"); el.classList.add(ok ? "ok" : "fail");
+    var statusEl = document.getElementById("live-"+d.toolUseId+"-status");
+    if (statusEl){
+      statusEl.className = "errno-tag "+(ok?"ok":"fail");
+      statusEl.textContent = d.response ? ("errno "+d.response.errno+" · "+(d.response.errmsg||"")) : (d.isError ? "调用失败" : "非 JSON 响应");
+    }
+    var outEl = document.getElementById("live-"+d.toolUseId+"-out");
+    if (outEl){
+      var shown = d.response !== null && d.response !== undefined ? d.response : d.text;
+      outEl.innerHTML = highlightJSON(shown);
+      outEl.setAttribute("data-raw", typeof d.text === "string" ? d.text : JSON.stringify(shown));
+    }
+  });
+  es.addEventListener("cost", function(e){
+    var d = JSON.parse(e.data);
+    var cost = typeof d.totalCostUsd === "number" ? ("$"+d.totalCostUsd.toFixed(4)) : "—";
+    var dur = typeof d.durationApiMs === "number" ? ((Math.round(d.durationApiMs/100)/10)+"s") : "—";
+    costNote.textContent = "本次真实用量："+cost+" · 模型耗时 "+dur;
+  });
+  es.addEventListener("final", function(e){
+    var d = JSON.parse(e.data);
+    tl.insertAdjacentHTML("beforeend", liveFinalHtml(d));
+    opts.onDone(true);
+  });
+  es.addEventListener("agent_error", function(e){
+    var msg = "执行失败";
+    try { msg = JSON.parse(e.data).message || msg; } catch(err){}
+    tl.insertAdjacentHTML("beforeend", '<div class="step fail"><div class="return-card"><div class="verdict fail">✗ '+esc(msg)+'</div></div></div>');
+    opts.onDone(false);
+  });
+  es.onerror = function(){
+    if (opts.isBusy()){
+      tl.insertAdjacentHTML("beforeend", '<div class="step fail"><div class="return-card"><div class="verdict fail">✗ 与演示服务的连接中断（请确认 node test/live-demo/server.js 正在运行）</div></div></div>');
+      opts.onDone(false);
+    }
+  };
+}
+
+function runLiveStart(c){
+  if (currentES) { currentES.close(); currentES = null; }
+  liveTurnCount = 1;
+  var tl = document.getElementById("liveTimeline");
+  var runBtn = document.getElementById("liveRunBtn");
+  var continueBtn = document.getElementById("liveContinueBtn");
+  var costNote = document.getElementById("liveCostNote");
+  tl.innerHTML = "";
+  costNote.textContent = "";
+  runBtn.disabled = true; runBtn.textContent = "执行中…";
+  continueBtn.disabled = true;
+
+  var msgEl = document.getElementById("liveInitMsg");
+  var message = msgEl ? msgEl.value : "";
+  var url = "/api/run/" + encodeURIComponent(c.id) + "?message=" + encodeURIComponent(message || "");
+  var es = new EventSource(url);
+  currentES = es;
+
+  wireLiveStream(es, tl, costNote, {
+    isBusy: function(){ return runBtn.disabled; },
+    onDone: function(ok){
+      runBtn.disabled = false; runBtn.textContent = ok ? "↻ 再次运行" : "↻ 重试";
+      continueBtn.disabled = false;
+      if (currentES === es){ es.close(); currentES = null; }
+    }
+  });
+}
+
+function runLiveContinue(c){
+  if (currentES) { currentES.close(); currentES = null; }
+  var nextMsgEl = document.getElementById("liveNextMsg");
+  var message = nextMsgEl ? nextMsgEl.value.trim() : "";
+  var tl = document.getElementById("liveTimeline");
+  var runBtn = document.getElementById("liveRunBtn");
+  var continueBtn = document.getElementById("liveContinueBtn");
+  var costNote = document.getElementById("liveCostNote");
+
+  if (!message){
+    tl.insertAdjacentHTML("beforeend", '<div class="step fail"><div class="return-card"><div class="verdict fail">✗ 请先输入要发送的消息内容</div></div></div>');
+    return;
+  }
+
+  liveTurnCount += 1;
+  tl.insertAdjacentHTML("beforeend", '<div class="turn-label">轮次 '+liveTurnCount+'</div>');
+  tl.insertAdjacentHTML("beforeend", '<div class="msg-bubble out"><div class="who">本轮新消息</div><div class="txt">'+esc(message)+'</div></div>');
+  costNote.textContent = "";
+  runBtn.disabled = true;
+  continueBtn.disabled = true; continueBtn.textContent = "执行中…";
+
+  var url = "/api/continue/" + encodeURIComponent(c.id) + "?message=" + encodeURIComponent(message);
+  var es = new EventSource(url);
+  currentES = es;
+
+  wireLiveStream(es, tl, costNote, {
+    isBusy: function(){ return continueBtn.disabled; },
+    onDone: function(ok){
+      runBtn.disabled = false;
+      continueBtn.disabled = false; continueBtn.textContent = "发送并继续";
+      if (ok && nextMsgEl) nextMsgEl.value = "";
+      if (currentES === es){ es.close(); currentES = null; }
+    }
+  });
+}
+
+/* ---------- copy-to-clipboard ---------- */
+document.addEventListener("click", function(e){
+  var btn = e.target.closest(".copy-btn"); if(!btn) return;
+  var pre = document.getElementById(btn.getAttribute("data-copy"));
+  if (!pre) return;
+  var text = pre.getAttribute("data-raw") || pre.textContent;
+  var finish = function(ok){ var old = btn.textContent; btn.textContent = ok ? "已复制" : "复制失败"; setTimeout(function(){ btn.textContent = "复制"; }, 1200); };
+  try {
+    navigator.clipboard.writeText(text).then(function(){ finish(true); }).catch(function(){ selectFallback(pre); finish(true); });
+  } catch(err){ selectFallback(pre); finish(true); }
+});
+function selectFallback(el){
+  try { var range = document.createRange(); range.selectNodeContents(el); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); } catch(e){}
+}
+})();
+</script>

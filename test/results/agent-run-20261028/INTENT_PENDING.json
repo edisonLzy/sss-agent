@@ -1,0 +1,58 @@
+{
+  "id": "INTENT_PENDING",
+  "title": "业主意向 PENDING",
+  "fields": {
+    "orderId": 900001,
+    "contractCode": "MOCK-TG-001",
+    "contractId": 600001,
+    "terminationType": "首招到期",
+    "backDate": "2026-11-01",
+    "executionId": 500001,
+    "sessionId": "mock-session",
+    "requestId": "mock-request"
+  },
+  "scenario": "first_recruit_success",
+  "state": {
+    "intention": {
+      "intention": "PENDING"
+    }
+  },
+  "userMessage": null,
+  "expected": {
+    "command": "end",
+    "lastTool": "query_owner_intention",
+    "draftCalls": 0
+  },
+  "actor": "当前对话中的 Codex；读取 Skill 后选择工具与最终输出",
+  "trajectory": [
+    {
+      "kind": "Call",
+      "name": "query_owner_intention",
+      "payload": {
+        "sessionId": "mock-session",
+        "requestId": "mock-request",
+        "orderId": 900001
+      },
+      "response": {
+        "errno": "0",
+        "errmsg": "success",
+        "error": "success",
+        "data": {
+          "intention": "PENDING",
+          "intentionDesc": "解约",
+          "expectedHandoverTime": "2026-11-01",
+          "expectedHandoverTimeDesc": "指定日期"
+        }
+      },
+      "recordedAt": "2026-10-28T08:52:40.746565+00:00"
+    }
+  ],
+  "output": {
+    "command": "end",
+    "nextScheduleAt": null,
+    "finalAnswer": null,
+    "reason": "业主续解意向尚未明确确认，提前结束本次解约自动推进"
+  },
+  "errors": [],
+  "passed": true
+}
